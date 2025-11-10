@@ -1,0 +1,22 @@
+# File Konfigurasi Lokal
+config.properties
+/server/config.properties
+/server/src/main/resources/config.properties
+
+# File IDE
+.idea/
+*.iml
+*.iws
+.project
+.classpath
+.settings/
+
+# File Build Maven
+/target/
+/client/target/
+/server/target/
+/common/target/
+
+# File sistem operasi
+.DS_Store
+Thumbs.db
