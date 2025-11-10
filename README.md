@@ -40,7 +40,7 @@ Ikuti langkah ini agar bisa langsung mulai _ngoding_.
 
 ```bash
 # 1. Clone repository ini
-git clone [URL_REPO_ANDA_DI_SINI]
+git clone https://github.com/darafinaselen/kantin-cepat
 cd kantin-cepat
 
 # 2. Pindah ke branch kerja kita (jika Anda clone baru)
