@@ -1,4 +1,3 @@
--- Hapus tabel jika sudah ada (untuk testing ulang)
 DROP TABLE IF EXISTS live_chat;
 DROP TABLE IF EXISTS order_details;
 DROP TABLE IF EXISTS orders;
