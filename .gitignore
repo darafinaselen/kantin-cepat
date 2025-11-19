@@ -1,7 +1,7 @@
 # File Konfigurasi Lokal
 config.properties
 /server/config.properties
-/server/src/main/resources/config.properties
+/server/src/main/resources/config.properties.example
 
 # File IDE
 .idea/
