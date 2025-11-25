@@ -1,129 +1,87 @@
-DROP TABLE IF EXISTS live_chat;
+-- RESET (Hapus semua urut dari bawah ke atas karena foreign key)
+DROP TABLE IF EXISTS chat_messages;
 DROP TABLE IF EXISTS order_details;
 DROP TABLE IF EXISTS orders;
-DROP TABLE IF EXISTS menu;
-DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS menu_items;
 DROP TABLE IF EXISTS users;
 DROP TYPE IF EXISTS user_role;
+DROP TYPE IF EXISTS menu_category;
 DROP TYPE IF EXISTS order_status;
+DROP TABLE IF EXISTS live_chat;
 
--- ====== MEMBUAT TIPE DATA KUSTOM (ENUM) ======
+DROP TABLE IF EXISTS menu;
+DROP TABLE IF EXISTS categories;
 
--- Tipe ENUM untuk peran pengguna
-CREATE TYPE user_role AS ENUM (
-    'ADMIN',
-    'DAPUR',
-    'PELANGGAN'
-);
+-- 1. ENUM TYPES
+CREATE TYPE user_role AS ENUM ('CUSTOMER', 'ADMIN', 'KITCHEN');
+CREATE TYPE menu_category AS ENUM ('MEALS', 'DRINK', 'SNACK');
+CREATE TYPE order_status AS ENUM ('PENDING', 'COOKING', 'READY', 'COMPLETED', 'CANCELLED');
 
--- Tipe ENUM untuk status pesanan
-CREATE TYPE order_status AS ENUM (
-    'DITERIMA',
-    'DIMASAK',
-    'SIAP_DIAMBIL',
-    'SELESAI',
-    'DIBATALKAN'
-);
-
--- ====== MEMBUAT TABEL-TABEL ======
-
--- Tabel untuk Kategori Menu (Makanan, Minuman, dll)
-CREATE TABLE categories (
-    category_id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE
-);
-
--- Tabel untuk Pengguna (Admin, Dapur, Pelanggan)
+-- 2. TABLE USERS
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
-    username VARCHAR(100) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL, -- Di proyek nyata, ini harus di-hash
-    role user_role NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    full_name VARCHAR(100),
+    phone_number VARCHAR(20),
+    role user_role DEFAULT 'CUSTOMER',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabel untuk Menu Makanan/Minuman
-CREATE TABLE menu (
+-- 3. TABLE MENU
+CREATE TABLE menu_items (
     menu_id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(100) NOT NULL,
     description TEXT,
-    price INT NOT NULL,
-    category_id INT NOT NULL,
-    image_path VARCHAR(255), -- Path ke file gambar
-    is_available BOOLEAN DEFAULT TRUE,
-    estimated_time_minutes INT,
-    
-    CONSTRAINT fk_category
-        FOREIGN KEY(category_id) 
-        REFERENCES categories(category_id)
-        ON DELETE SET NULL -- Jika kategori dihapus, menu tetap ada tapi kategorinya null
+    price DECIMAL(10, 2) NOT NULL,
+    category menu_category NOT NULL,
+    image_path VARCHAR(255),
+    is_available BOOLEAN DEFAULT TRUE
 );
 
--- Tabel "Kepala" Pesanan
+-- 4. TABLE ORDERS
 CREATE TABLE orders (
     order_id SERIAL PRIMARY KEY,
-    customer_id INT NOT NULL,
-    total_price INT NOT NULL,
-    status order_status NOT NULL DEFAULT 'DITERIMA',
-    order_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT fk_customer
-        FOREIGN KEY(customer_id) 
-        REFERENCES users(user_id)
+    user_id INT,
+    total_amount DECIMAL(10, 2),
+    status order_status DEFAULT 'PENDING',
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
--- Tabel Detail Pesanan (Penghubung Many-to-Many antara orders dan menu)
+-- 5. TABLE ORDER DETAILS
 CREATE TABLE order_details (
-    order_detail_id SERIAL PRIMARY KEY,
-    order_id INT NOT NULL,
-    menu_id INT NOT NULL,
+    detail_id SERIAL PRIMARY KEY,
+    order_id INT,
+    menu_id INT,
     quantity INT NOT NULL,
-    price_at_order INT NOT NULL, -- Menyimpan harga saat pesan (jika harga menu berubah)
-    
-    CONSTRAINT fk_order
-        FOREIGN KEY(order_id) 
-        REFERENCES orders(order_id)
-        ON DELETE CASCADE, -- Jika pesanan dihapus, detailnya ikut terhapus
-    CONSTRAINT fk_menu
-        FOREIGN KEY(menu_id) 
-        REFERENCES menu(menu_id)
-        ON DELETE RESTRICT -- Jangan biarkan menu dihapus jika masih ada di pesanan
+    subtotal DECIMAL(10, 2),
+    notes VARCHAR(255),
+    FOREIGN KEY (order_id) REFERENCES orders(order_id),
+    FOREIGN KEY (menu_id) REFERENCES menu_items(menu_id)
 );
 
--- Tabel untuk Live Chat
-CREATE TABLE live_chat (
+-- 6. TABLE CHAT MESSAGES (BARU! ✨)
+CREATE TABLE chat_messages (
     chat_id SERIAL PRIMARY KEY,
-    sender_id INT NOT NULL,
-    receiver_id INT NOT NULL,
-    message_content TEXT NOT NULL,
-    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT fk_sender
-        FOREIGN KEY(sender_id) 
-        REFERENCES users(user_id),
-    CONSTRAINT fk_receiver
-        FOREIGN KEY(receiver_id) 
-        REFERENCES users(user_id)
+    sender_id INT NOT NULL,   -- Siapa yang kirim
+    receiver_id INT,          -- Siapa yang terima (Bisa NULL jika broadcast ke semua Admin)
+    message TEXT NOT NULL,
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (sender_id) REFERENCES users(user_id),
+    FOREIGN KEY (receiver_id) REFERENCES users(user_id)
 );
 
--- ====== MEMASUKKAN DATA DUMMY (CONTOH) ======
+-- SEEDING DATA
+INSERT INTO users (username, password, full_name, phone_number, role) VALUES 
+('admin', 'admin123', 'Admin Kantin', '081234567890', 'ADMIN'),
+('dapur', 'dapur123', 'Staff Dapur', '081234567891', 'KITCHEN'),
+('user1', 'user123', 'Wahyunii Sulastri', '081992194938', 'CUSTOMER');
 
--- 1. Isi Kategori
-INSERT INTO categories (name) VALUES ('Makanan Utama'), ('Minuman'), ('Cemilan');
+INSERT INTO menu_items (name, description, price, category, is_available) VALUES
+('Ayam Geprek', 'Ayam geprek pedas nampol', 10000, 'MEALS', TRUE),
+('Es Teh', 'Es teh manis segar', 5000, 'DRINK', TRUE);
 
--- 2. Isi Pengguna
--- (Password "admin123", "dapur123", "pelanggan123". Nanti ini harus di-hash!)
-INSERT INTO users (username, password, role) VALUES 
-('admin', 'admin123', 'ADMIN'),
-('dapur', 'dapur123', 'DAPUR'),
-('pelanggan', 'pelanggan123', 'PELANGGAN');
-
--- 3. Isi Menu
-INSERT INTO menu (name, description, price, category_id, image_path, is_available, estimated_time_minutes)
-VALUES 
-('Nasi Goreng Spesial', 'Nasi goreng dengan telur, ayam, dan bakso', 25000, 1, 'assets/nasi_goreng.jpg', TRUE, 15),
-('Es Teh Manis', 'Teh segar dengan es dan gula', 5000, 2, 'assets/es_teh.jpg', TRUE, 3),
-('Kentang Goreng', 'Kentang goreng renyah dengan saus', 15000, 3, 'assets/kentang_goreng.jpg', TRUE, 10),
-('Ayam Geprek', 'Ayam goreng pedas dengan sambal bawang', 18000, 1, 'assets/ayam_geprek.jpg', FALSE, 20); -- Contoh item tidak tersedia
-
-COMMIT;
+-- Dummy Chat
+INSERT INTO chat_messages (sender_id, receiver_id, message) VALUES
+(3, 1, 'Halo min, ayam gepreknya masih ada?');
