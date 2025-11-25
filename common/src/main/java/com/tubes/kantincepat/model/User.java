@@ -8,20 +8,20 @@ public class User implements Serializable {
 
     private int id;
     private String username;
+    private String email;
     private String fullName;
     private String phoneNumber;
     private String role; // "CUSTOMER", "ADMIN", "KITCHEN"
-    private String email;
 
     public User() {}
 
-    public User(int id, String username, String fullName, String phoneNumber, String role, String email) {
+    public User(int id, String username, String email, String fullName, String phoneNumber, String role) {
         this.id = id;
         this.username = username;
+        this.email = email;
         this.fullName = fullName;
         this.phoneNumber = phoneNumber;
         this.role = role;
-        this.email = email;
     }
 
     // Getter dan Setter (untuk akses data)
