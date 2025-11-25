@@ -21,6 +21,7 @@ CREATE TYPE order_status AS ENUM ('PENDING', 'COOKING', 'READY', 'COMPLETED', 'C
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE,
     password VARCHAR(255) NOT NULL,
     full_name VARCHAR(100),
     phone_number VARCHAR(20),
@@ -67,16 +68,17 @@ CREATE TABLE chat_messages (
     sender_id INT NOT NULL,   -- Siapa yang kirim
     receiver_id INT,          -- Siapa yang terima (Bisa NULL jika broadcast ke semua Admin)
     message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
     sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (sender_id) REFERENCES users(user_id),
     FOREIGN KEY (receiver_id) REFERENCES users(user_id)
 );
 
 -- SEEDING DATA
-INSERT INTO users (username, password, full_name, phone_number, role) VALUES 
-('admin', 'admin123', 'Admin Kantin', '081234567890', 'ADMIN'),
-('dapur', 'dapur123', 'Staff Dapur', '081234567891', 'KITCHEN'),
-('user1', 'user123', 'Wahyunii Sulastri', '081992194938', 'CUSTOMER');
+INSERT INTO users (username, email, password, full_name, phone_number, role) VALUES 
+('admin', 'admin@kantin.com', 'admin123', 'Admin Kantin', '081234567890', 'ADMIN'),
+('dapur', 'dapur@kantin.com', 'dapur123', 'Staff Dapur', '081234567891', 'KITCHEN'),
+('user1', 'wahyuni@gmail.com', 'user123', 'Wahyunii Sulastri', '081992194938', 'CUSTOMER');
 
 INSERT INTO menu_items (name, description, price, category, is_available) VALUES
 ('Ayam Geprek', 'Ayam geprek pedas nampol', 10000, 'MEALS', TRUE),

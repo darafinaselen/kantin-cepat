@@ -11,15 +11,17 @@ public class User implements Serializable {
     private String fullName;
     private String phoneNumber;
     private String role; // "CUSTOMER", "ADMIN", "KITCHEN"
+    private String email;
 
     public User() {}
 
-    public User(int id, String username, String fullName, String phoneNumber, String role) {
+    public User(int id, String username, String fullName, String phoneNumber, String role, String email) {
         this.id = id;
         this.username = username;
         this.fullName = fullName;
         this.phoneNumber = phoneNumber;
         this.role = role;
+        this.email = email;
     }
 
     // Getter dan Setter (untuk akses data)

@@ -47,14 +47,15 @@ public class ClientHandler implements Runnable{
         // Format: LOGIN:username:password
         if (parts.length < 3) { out.println("LOGIN_FAILED:Invalid Format"); return; }
         
-        String username = parts[1];
+        String inputIdentitas = parts[1];
         String password = parts[2];
 
         try (Connection conn = DatabaseConnetion.getConnection()) {
-            String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
+            String sql = "SELECT * FROM users WHERE (username = ? OR email = ?) AND password = ?";
             PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setString(1, username);
-            stmt.setString(2, password);
+            stmt.setString(1, inputIdentitas);
+            stmt.setString(2, inputIdentitas);
+            stmt.setString(3, password);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
                 String role = rs.getString("role"); 
@@ -70,16 +71,16 @@ public class ClientHandler implements Runnable{
     }
 
     private void handleRegister(String[] parts) {
-        // Format: REGISTER:username:password:fullname:phoneNumber
-        if (parts.length < 5) { out.println("REGISTER_FAILED:Format Salah"); return; }
+        if (parts.length < 6) { out.println("REGISTER_FAILED:Format Salah"); return; }
 
         try (Connection conn = DatabaseConnetion.getConnection()) {
-            String sql = "INSERT INTO users (username, password, full_name, phone_number, role) VALUES (?, ?, ?, ?, 'CUSTOMER')";
+            String sql = "INSERT INTO users (username, email, password, full_name, phone_number, role) VALUES (?, ?, ?, ?, ?, 'CUSTOMER')";
             PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setString(1, parts[1]);
-            stmt.setString(2, parts[2]);
-            stmt.setString(3, parts[3]);
-            stmt.setString(4, parts[4]);
+            stmt.setString(1, parts[1]); // username
+            stmt.setString(2, parts[2]); // email
+            stmt.setString(3, parts[3]); // password
+            stmt.setString(4, parts[4]); // full_name
+            stmt.setString(5, parts[5]); // phone_number
 
             int rows = stmt.executeUpdate();
             if (rows > 0) out.println("REGISTER_SUCCESS");
