@@ -80,7 +80,7 @@ public class Checkout extends JPanel {
 
     private JPanel createButton(String text) {
         // Container tombol rounded warna Pink
-        RoundedPanel panel = new RoundedPanel(25, ClientApp.COLOR_PRIMARY);
+        RoundedPanel panel = new RoundedPanel(25, GUIUtils.COLOR_PRIMARY);
         panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55)); // Tinggi tombol
         panel.setPreferredSize(new Dimension(300, 55));
         panel.setLayout(new GridBagLayout()); // Center text

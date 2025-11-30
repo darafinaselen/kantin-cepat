@@ -9,7 +9,10 @@ import java.io.InputStream;
 
 public class GUIUtils {
     // Warna Global
+    public static final Color COLOR_PRIMARY = Color.decode("#D4A3C4");
     public static final Color COLOR_BG = Color.decode("#FFFFFF");
+    public static final Color COLOR_BG2 = Color.decode("#F8F8FC");
+    public static final Color COLOR_ACCENT = Color.decode("#F6EDE3");
     public static final Color COLOR_BTN = Color.decode("#D4A3C4");
     public static final Color COLOR_TEXT = Color.decode("#000000");
 
@@ -234,4 +237,5 @@ public class GUIUtils {
         p.add(field);
         p.add(Box.createRigidArea(new Dimension(0, 10)));
     }
+
 }

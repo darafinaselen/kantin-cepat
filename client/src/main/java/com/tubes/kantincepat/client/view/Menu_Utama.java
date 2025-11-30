@@ -40,7 +40,7 @@ public class Menu_Utama extends JPanel {
 
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBackground(ClientApp.COLOR_BG); // Akses warna dari ClientApp
+        content.setBackground(GUIUtils.COLOR_BG2); // Akses warna dari ClientApp
         content.setBorder(new EmptyBorder(20, 20, 20, 20));
 
         // Add Components
@@ -53,9 +53,9 @@ public class Menu_Utama extends JPanel {
 
         // Label Menu
         JLabel lblMenu = new JLabel("Our Menu");
-        lblMenu.setFont(ClientApp.FONT_TITLE);
+        lblMenu.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 18f));
         JPanel titleWrapper = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        titleWrapper.setBackground(ClientApp.COLOR_BG);
+        titleWrapper.setBackground(GUIUtils.COLOR_BG2);
         titleWrapper.add(lblMenu);
         titleWrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
         content.add(titleWrapper);
@@ -63,7 +63,7 @@ public class Menu_Utama extends JPanel {
 
         // Grid Menu
         menuGridPanel = new JPanel(new GridLayout(0, 2, 15, 15));
-        menuGridPanel.setBackground(ClientApp.COLOR_BG);
+        menuGridPanel.setBackground(GUIUtils.COLOR_BG2);
         content.add(menuGridPanel);
         filterMenu("All");
 
@@ -128,11 +128,11 @@ public class Menu_Utama extends JPanel {
 
     private JPanel createHeader() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(ClientApp.COLOR_BG);
+        panel.setBackground(GUIUtils.COLOR_BG);
         panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
 
         JLabel lblWelcome = new JLabel("Welcome Back!!");
-        lblWelcome.setFont(ClientApp.FONT_TITLE);
+        lblWelcome.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 18f));
 
         ImageIcon scaledImage = new ImageIcon(GUIUtils.loadImageIcon("chat.png", 30, 30).getImage());
         // Image scaledImage = originalIcon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
@@ -282,9 +282,9 @@ public class Menu_Utama extends JPanel {
 
             // Jika activeCategory null (sedang search), matikan semua tombol
             if (activeCategory != null && key.equals(activeCategory)) {
-                btn.setColor(ClientApp.COLOR_PRIMARY); 
+                btn.setColor(GUIUtils.COLOR_PRIMARY); 
             } else {
-                btn.setColor(ClientApp.COLOR_ACCENT); 
+                btn.setColor(GUIUtils.COLOR_ACCENT); 
             }
             btn.repaint();
         }
@@ -292,7 +292,7 @@ public class Menu_Utama extends JPanel {
 
     private JPanel createCategories() {
         JPanel panel = new JPanel(new GridLayout(1, 4, 10, 0));
-        panel.setBackground(ClientApp.COLOR_BG);
+        panel.setBackground(GUIUtils.COLOR_BG2);
         panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
 
         // Tambahkan tombol dengan ID Kategori
@@ -306,10 +306,10 @@ public class Menu_Utama extends JPanel {
     private JPanel createCategoryItem(String name, String imagePath, String categoryKey) {
         JPanel container = new JPanel();
         container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
-        container.setBackground(ClientApp.COLOR_BG);
+        container.setBackground(GUIUtils.COLOR_BG2);
 
         // Container Tombol (Rounded)
-        RoundedPanel iconPanel = new RoundedPanel(50, ClientApp.COLOR_ACCENT);
+        RoundedPanel iconPanel = new RoundedPanel(50, GUIUtils.COLOR_ACCENT);
         iconPanel.setPreferredSize(new Dimension(50, 50));
         iconPanel.setMaximumSize(new Dimension(50, 50));
         iconPanel.setLayout(new GridBagLayout());
@@ -324,7 +324,7 @@ public class Menu_Utama extends JPanel {
 
         // Label Nama
         JLabel nameLabel = new JLabel(name);
-        nameLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        nameLabel.setFont(GUIUtils.getCustomFont("Lato-Regular.ttf", 11f));
         nameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         // --- AKSI KLIK TOMBOL KATEGORI ---
@@ -343,13 +343,13 @@ public class Menu_Utama extends JPanel {
     }
 
     private JPanel createMenuCard(MenuItem item) {
-        RoundedPanel card = new RoundedPanel(20, ClientApp.COLOR_ACCENT);
+        RoundedPanel card = new RoundedPanel(20, GUIUtils.COLOR_ACCENT);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(10, 10, 10, 10));
 
         // Gambar
         JPanel imgPanel = new JPanel(new GridBagLayout());
-        imgPanel.setBackground(ClientApp.COLOR_ACCENT);
+        imgPanel.setBackground(GUIUtils.COLOR_ACCENT);
         try {
         ImageIcon originalIcon = new ImageIcon(item.imagePath);
         Image scaledImage = originalIcon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
@@ -362,24 +362,24 @@ public class Menu_Utama extends JPanel {
 
         // Info
         JPanel infoPanel = new JPanel(new GridLayout(2, 1));
-        infoPanel.setBackground(ClientApp.COLOR_ACCENT);
+        infoPanel.setBackground(GUIUtils.COLOR_ACCENT);
         JLabel lblName = new JLabel(item.name);
-        lblName.setFont(ClientApp.FONT_BOLD);
+        lblName.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 14f));
         JLabel lblPrice = new JLabel(item.getFormattedPrice());
-        lblPrice.setFont(ClientApp.FONT_BOLD);
+         lblPrice.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 14f));
         infoPanel.add(lblName);
         infoPanel.add(lblPrice);
 
         // Tombol +
         JPanel bottomRow = new JPanel(new BorderLayout());
-        bottomRow.setBackground(ClientApp.COLOR_ACCENT);
+        bottomRow.setBackground(GUIUtils.COLOR_ACCENT);
         bottomRow.add(infoPanel, BorderLayout.CENTER);
 
         JLabel btnAdd = new JLabel("+", SwingConstants.CENTER);
         btnAdd.setOpaque(true);
-        btnAdd.setBackground(ClientApp.COLOR_PRIMARY);
-        btnAdd.setForeground(ClientApp.COLOR_ACCENT);
-        btnAdd.setFont(new Font("SansSerif", Font.BOLD, 16));
+        btnAdd.setBackground(GUIUtils.COLOR_PRIMARY);
+        btnAdd.setForeground(GUIUtils.COLOR_ACCENT);
+        btnAdd.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 16f));
         btnAdd.setPreferredSize(new Dimension(25, 25));
         
         // Agar kursor berubah saat dihover
@@ -398,7 +398,7 @@ public class Menu_Utama extends JPanel {
         });
         
         JPanel btnWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0,0));
-        btnWrapper.setBackground(ClientApp.COLOR_ACCENT);
+        btnWrapper.setBackground(GUIUtils.COLOR_ACCENT);
         btnWrapper.add(btnAdd);
         bottomRow.add(btnWrapper, BorderLayout.SOUTH);
 

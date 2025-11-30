@@ -25,7 +25,7 @@ public class Menu_Detail extends JPanel {
     public Menu_Detail(ClientApp app) {
         this.ClientApp = app;
         setLayout(new BorderLayout());
-        setBackground(ClientApp.COLOR_BG);
+        setBackground(GUIUtils.COLOR_BG2);
 
         // 1. HEADER (Tombol Back)
         add(createHeader(), BorderLayout.NORTH);
@@ -72,11 +72,11 @@ public class Menu_Detail extends JPanel {
 
     private JPanel createHeader() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(ClientApp.COLOR_BG);
+        panel.setBackground(GUIUtils.COLOR_BG2);
         panel.setBorder(new EmptyBorder(15, 20, 15, 20));
 
         JLabel btnBack = new JLabel("←");
-        btnBack.setFont(new Font("SansSerif", Font.BOLD, 24));
+        btnBack.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 24f));
         btnBack.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnBack.addMouseListener(new MouseAdapter() {
             @Override
@@ -94,7 +94,7 @@ public class Menu_Detail extends JPanel {
         // Panel Induk (Vertikal Stack)
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
-        mainPanel.setBackground(ClientApp.COLOR_BG);
+        mainPanel.setBackground(GUIUtils.COLOR_BG2);
         // Padding Kiri-Kanan 20px agar konten tidak mepet layar
         mainPanel.setBorder(new EmptyBorder(0, 20, 30, 20)); 
 
@@ -115,7 +115,7 @@ public class Menu_Detail extends JPanel {
     // --- WRAPPER 1: GAMBAR ---
     private JPanel createImageWrapper() {
         JPanel wrapper = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-        wrapper.setBackground(ClientApp.COLOR_BG);
+        wrapper.setBackground(GUIUtils.COLOR_BG2);
         
         // Container Rounded Putih
         RoundedPanel imageContainer = new RoundedPanel(30, Color.WHITE);
@@ -134,7 +134,7 @@ public class Menu_Detail extends JPanel {
     private JPanel createTitlePriceWrapper() {
         // Gunakan BorderLayout agar Nama di Kiri, Harga di Kanan
         JPanel wrapper = new JPanel(new BorderLayout());
-        wrapper.setBackground(ClientApp.COLOR_BG);
+        wrapper.setBackground(GUIUtils.COLOR_BG2);
         // Batasi tinggi wrapper agar tidak terlalu tinggi
         wrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40)); 
 
@@ -143,7 +143,7 @@ public class Menu_Detail extends JPanel {
 
         lblPrice = new JLabel("Rp. 0");
         lblPrice.setFont(new Font("SansSerif", Font.BOLD, 18));
-        lblPrice.setForeground(ClientApp.COLOR_PRIMARY);
+        lblPrice.setForeground(GUIUtils.COLOR_PRIMARY);
 
         wrapper.add(lblName, BorderLayout.WEST);
         wrapper.add(lblPrice, BorderLayout.EAST);
@@ -156,7 +156,7 @@ public class Menu_Detail extends JPanel {
         // Gunakan BoxLayout Vertikal untuk Judul + Teks
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBackground(ClientApp.COLOR_BG);
+        content.setBackground(GUIUtils.COLOR_BG2);
         
         // Judul "Description"
         JLabel lblDescTitle = new JLabel("Description");
@@ -165,7 +165,7 @@ public class Menu_Detail extends JPanel {
         
         // Isi Deskripsi
         txtDescription = new JTextArea();
-        txtDescription.setFont(ClientApp.FONT_PLAIN);
+        txtDescription.setFont(GUIUtils.getCustomFont("Lato-Regular.ttf", 12f));
         txtDescription.setLineWrap(true);
         txtDescription.setWrapStyleWord(true);
         txtDescription.setEditable(false); 
@@ -180,7 +180,7 @@ public class Menu_Detail extends JPanel {
 
         // Bungkus lagi dengan FlowLayout LEFT agar panel content menempel di kiri layar
         JPanel wrapper = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        wrapper.setBackground(ClientApp.COLOR_BG);
+        wrapper.setBackground(GUIUtils.COLOR_BG2);
         // Atur lebar wrapper agar teks bisa wrapping (turun baris) dengan benar
         // Kita set lebar preferensi 300px (sama dengan lebar gambar)
         content.setPreferredSize(new Dimension(300, 200)); 
@@ -192,16 +192,16 @@ public class Menu_Detail extends JPanel {
 
     private JPanel createBottomActionPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(ClientApp.COLOR_BG);
+        panel.setBackground(GUIUtils.COLOR_BG2);
         panel.setBorder(new EmptyBorder(20, 20, 30, 20)); 
 
-        RoundedPanel btnAddToCart = new RoundedPanel(25, ClientApp.COLOR_PRIMARY);
+        RoundedPanel btnAddToCart = new RoundedPanel(25, GUIUtils.COLOR_PRIMARY);
         btnAddToCart.setPreferredSize(new Dimension(100, 55));
         btnAddToCart.setLayout(new GridBagLayout());
         btnAddToCart.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         JLabel lblBtnText = new JLabel("Add to Cart");
-        lblBtnText.setFont(new Font("SansSerif", Font.BOLD, 18));
+        lblBtnText.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 18f));
         lblBtnText.setForeground(Color.WHITE);
         btnAddToCart.add(lblBtnText);
 

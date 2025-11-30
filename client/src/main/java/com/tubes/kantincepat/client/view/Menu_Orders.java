@@ -19,14 +19,14 @@ public class Menu_Orders extends JPanel {
     public Menu_Orders(ClientApp app) {
         this.ClientApp = app;
         setLayout(new BorderLayout());
-        setBackground(ClientApp.COLOR_BG);
+        setBackground(GUIUtils.COLOR_BG2);
 
         add(createHeader(), BorderLayout.NORTH);
 
         // Setup Content List
         contentList = new JPanel();
         contentList.setLayout(new BoxLayout(contentList, BoxLayout.Y_AXIS));
-        contentList.setBackground(ClientApp.COLOR_BG);
+        contentList.setBackground(GUIUtils.COLOR_BG2);
         contentList.setBorder(new EmptyBorder(10, 20, 10, 20));
 
         JScrollPane scrollPane = new JScrollPane(contentList);
@@ -63,12 +63,12 @@ public class Menu_Orders extends JPanel {
 
     private JPanel createHeader() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(ClientApp.COLOR_BG);
+        panel.setBackground(GUIUtils.COLOR_BG2);
         panel.setBorder(new EmptyBorder(15, 20, 15, 20));
         panel.setPreferredSize(new Dimension(getWidth(), 60));
 
         JLabel title = new JLabel("My Orders", SwingConstants.CENTER);
-        title.setFont(ClientApp.FONT_TITLE);
+        title.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 18f));
         
         panel.add(title, BorderLayout.CENTER);
         return panel;
@@ -76,7 +76,7 @@ public class Menu_Orders extends JPanel {
 
     private JPanel createOrderCard(Order order) {
         // Container Kartu
-        RoundedPanel card = new RoundedPanel(20, ClientApp.COLOR_ACCENT);
+        RoundedPanel card = new RoundedPanel(20, GUIUtils.COLOR_ACCENT);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
         card.setMaximumSize(new Dimension(300, 160)); 
@@ -109,12 +109,12 @@ public class Menu_Orders extends JPanel {
         }
 
         JLabel lblItems = new JLabel(displayText);
-        lblItems.setFont(ClientApp.FONT_BOLD);
+        lblItems.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 14f));
         lblItems.setToolTipText(fullText);
         
         JLabel lblPrice = new JLabel(order.totalPrice);
         lblPrice.setFont(new Font("SansSerif", Font.BOLD, 14));
-        lblPrice.setForeground(ClientApp.COLOR_PRIMARY);
+        lblPrice.setForeground(GUIUtils.COLOR_PRIMARY);
 
         midPanel.add(lblItems);
         midPanel.add(Box.createVerticalStrut(3));
@@ -215,7 +215,7 @@ public class Menu_Orders extends JPanel {
 
         if (isPrimary) {
             // Gaya Tombol Utama (Pink Penuh)
-            btn.setBackground(ClientApp.COLOR_PRIMARY);
+            btn.setBackground(GUIUtils.COLOR_PRIMARY);
             btn.setForeground(Color.WHITE);
         } else {
             // Gaya Tombol Sekunder (Putih border abu)

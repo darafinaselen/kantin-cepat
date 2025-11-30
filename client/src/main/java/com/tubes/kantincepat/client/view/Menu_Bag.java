@@ -4,7 +4,6 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
 import com.tubes.kantincepat.client.ClientApp;
-import com.tubes.kantincepat.client.view.GUIUtils;
 
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -28,7 +27,7 @@ public class Menu_Bag extends JPanel {
     public Menu_Bag(ClientApp app) {
         this.mainApp = app;
         setLayout(new BorderLayout());
-        setBackground(ClientApp.COLOR_BG);
+        setBackground(GUIUtils.COLOR_BG2);
 
         // 1. Header
         add(createBagHeader(), BorderLayout.NORTH);
@@ -37,7 +36,7 @@ public class Menu_Bag extends JPanel {
         // PERBAIKAN: Jangan pakai 'JPanel contentList = ...', langsung 'contentList = ...'
         contentList = new JPanel(); 
         contentList.setLayout(new BoxLayout(contentList, BoxLayout.Y_AXIS));
-        contentList.setBackground(ClientApp.COLOR_BG);
+        contentList.setBackground(GUIUtils.COLOR_BG2);
         contentList.setBorder(new EmptyBorder(10, 20, 10, 20));
 
         // PERBAIKAN: Hapus kode hardcoded (add createCartItem manual) disini.
@@ -68,7 +67,7 @@ public class Menu_Bag extends JPanel {
         if (mainApp.cartItems.isEmpty()) {
             JLabel emptyLabel = new JLabel("Keranjang masih kosong");
             emptyLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-            emptyLabel.setFont(ClientApp.FONT_PLAIN);
+            emptyLabel.setFont(GUIUtils.getCustomFont("Lato-Regular.ttf", 12f));
             contentList.add(Box.createVerticalStrut(50)); // Spasi atas
             contentList.add(emptyLabel);
         } else {
@@ -117,11 +116,11 @@ public class Menu_Bag extends JPanel {
     // Method diubah parameternya menerima (MenuItem item, int qty)
     private JPanel createCartItem(MenuItem item, int qty) {
         JPanel panel = new JPanel(new BorderLayout(15, 0));
-        panel.setBackground(ClientApp.COLOR_BG);
+        panel.setBackground(GUIUtils.COLOR_BG2);
         panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
 
         // Image
-        JPanel imgContainer = new RoundedPanel(20, mainApp.COLOR_ACCENT);
+        JPanel imgContainer = new RoundedPanel(20, GUIUtils.COLOR_ACCENT);
         imgContainer.setPreferredSize(new Dimension(80, 80));
         imgContainer.setLayout(new GridBagLayout());
         try {
@@ -135,19 +134,19 @@ public class Menu_Bag extends JPanel {
         // Center Info
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
-        centerPanel.setBackground(ClientApp.COLOR_BG);
+        centerPanel.setBackground(GUIUtils.COLOR_BG2);
 
         JLabel lblName = new JLabel(item.name);
-        lblName.setFont(ClientApp.FONT_BOLD);
+        lblName.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 14f));
         lblName.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel lblPrice = new JLabel(item.getFormattedPrice());
-        lblPrice.setFont(ClientApp.FONT_PLAIN);
+        lblPrice.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 12f));
         lblPrice.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         // --- PANEL QUANTITY DENGAN TOMBOL AKTIF ---
         JPanel qtyPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        qtyPanel.setBackground(ClientApp.COLOR_BG);
+        qtyPanel.setBackground(GUIUtils.COLOR_BG2);
         qtyPanel.setBorder(new EmptyBorder(5, -5, 0, 0));
         qtyPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -163,7 +162,7 @@ public class Menu_Bag extends JPanel {
 
         // Label Angka Qty
         JLabel lblQty = new JLabel(String.valueOf(qty));
-        lblQty.setFont(ClientApp.FONT_BOLD);
+        lblQty.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 14f));
 
         // Tombol PLUS
         JLabel btnPlus = createQtyButton("+");
@@ -202,7 +201,7 @@ public class Menu_Bag extends JPanel {
         });
 
         JPanel rightPanel = new JPanel(new BorderLayout());
-        rightPanel.setBackground(ClientApp.COLOR_BG);
+        rightPanel.setBackground(GUIUtils.COLOR_BG2);
         rightPanel.add(btnDelete, BorderLayout.NORTH);
 
         panel.add(imgContainer, BorderLayout.WEST);
@@ -231,28 +230,28 @@ public class Menu_Bag extends JPanel {
 
     private JPanel createBagFooter() {
         JPanel panel = new JPanel(new BorderLayout(0, 15));
-        panel.setBackground(ClientApp.COLOR_BG);
+        panel.setBackground(GUIUtils.COLOR_BG2);
         panel.setBorder(new EmptyBorder(10, 20, 20, 20));
 
         JPanel totalPanel = new JPanel(new BorderLayout());
-        totalPanel.setBackground(ClientApp.COLOR_BG);
+        totalPanel.setBackground(GUIUtils.COLOR_BG2);
         JLabel lblTotal = new JLabel("Total:");
-        lblTotal.setFont(ClientApp.FONT_BOLD);
+        lblTotal.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 14f));
         
         lblTotalNominal = new JLabel("Rp. 0");
-        lblTotalNominal.setFont(new Font("SansSerif", Font.BOLD, 18));
+        lblTotalNominal.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 18f));
         
         totalPanel.add(lblTotal, BorderLayout.WEST);
         totalPanel.add(lblTotalNominal, BorderLayout.EAST);
 
-        RoundedPanel btnCheckout = new RoundedPanel(20, ClientApp.COLOR_PRIMARY);
+        RoundedPanel btnCheckout = new RoundedPanel(20, GUIUtils.COLOR_PRIMARY);
         btnCheckout.setPreferredSize(new Dimension(100, 50));
         btnCheckout.setLayout(new GridBagLayout());
         btnCheckout.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
         JLabel lblCheckout = new JLabel("Checkout");
         lblCheckout.setForeground(Color.WHITE);
-        lblCheckout.setFont(new Font("SansSerif", Font.BOLD, 16));
+        lblCheckout.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 16f));
         btnCheckout.add(lblCheckout);
 
         // --- LOGIKA TOMBOL CHECKOUT (FULL CODE) ---
@@ -350,18 +349,18 @@ public class Menu_Bag extends JPanel {
         JLabel btn = new JLabel(text, SwingConstants.CENTER);
         btn.setPreferredSize(new Dimension(24, 24));
         btn.setFont(new Font("SansSerif", Font.BOLD, 16));
-        btn.setForeground(mainApp.COLOR_PRIMARY);
-        btn.setBorder(BorderFactory.createLineBorder(mainApp.COLOR_PRIMARY, 1, true));
+        btn.setForeground(GUIUtils.COLOR_PRIMARY);
+        btn.setBorder(BorderFactory.createLineBorder(GUIUtils.COLOR_PRIMARY, 1, true));
         return btn;
     }
 
     private JPanel createBagHeader() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(mainApp.COLOR_BG);
+        panel.setBackground(GUIUtils.COLOR_BG2);
         panel.setBorder(new EmptyBorder(15, 20, 15, 20));
 
         JLabel btnBack = new JLabel("←");
-        btnBack.setFont(new Font("SansSerif", Font.BOLD, 24));
+        btnBack.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 24f));
         btnBack.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
         btnBack.addMouseListener(new MouseAdapter() {
@@ -372,7 +371,7 @@ public class Menu_Bag extends JPanel {
         });
 
         JLabel title = new JLabel("My Bag", SwingConstants.CENTER);
-        title.setFont(mainApp.FONT_TITLE);
+        title.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 18f));
         
         panel.add(btnBack, BorderLayout.WEST);
         panel.add(title, BorderLayout.CENTER);
@@ -384,18 +383,18 @@ public class Menu_Bag extends JPanel {
         // 1. Panel Induk (Membungkus Label + Kotak)
         JPanel mainContainer = new JPanel();
         mainContainer.setLayout(new BoxLayout(mainContainer, BoxLayout.Y_AXIS));
-        mainContainer.setBackground(mainApp.COLOR_BG);
+        mainContainer.setBackground(GUIUtils.COLOR_BG2);
         // Beri margin kiri sedikit agar sejajar dengan list menu
         mainContainer.setBorder(new EmptyBorder(0, 5, 0, 0)); 
         mainContainer.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120)); // Batasi tinggi total
 
         // 2. Buat Label "Notes"
         JLabel lblNotes = new JLabel("Notes");
-        lblNotes.setFont(mainApp.FONT_BOLD);
+        lblNotes.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 14f));
         
         // Wrapper Label (Agar rata kiri)
         JPanel labelWrap = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        labelWrap.setBackground(mainApp.COLOR_BG);
+        labelWrap.setBackground(GUIUtils.COLOR_BG2);
         labelWrap.add(lblNotes);
 
         // 3. Buat Kotak Input (Rounded Logic)
@@ -416,7 +415,7 @@ public class Menu_Bag extends JPanel {
         roundedContainer.setPreferredSize(new Dimension(100, 80)); 
 
         notesArea = new JTextArea();
-        notesArea.setFont(mainApp.FONT_PLAIN);
+        notesArea.setFont(GUIUtils.getCustomFont("Lato-Regular.ttf", 12f));
         notesArea.setBorder(new EmptyBorder(10, 15, 10, 15)); 
         notesArea.setLineWrap(true);
         notesArea.setWrapStyleWord(true);

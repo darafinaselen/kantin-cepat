@@ -69,7 +69,7 @@ public class LiveChat extends JPanel {
         infoPanel.setBackground(Color.WHITE);
         
         // Foto Kasir
-        RoundedPanel avatar = new RoundedPanel(40, ClientApp.COLOR_ACCENT);
+        RoundedPanel avatar = new RoundedPanel(40, GUIUtils.COLOR_ACCENT);
         avatar.setPreferredSize(new Dimension(40, 40));
         avatar.setLayout(new GridBagLayout());
         try {
@@ -156,7 +156,7 @@ public class LiveChat extends JPanel {
             leftContainer.setBackground(Color.WHITE);
             
             // Avatar
-            RoundedPanel avatar = new RoundedPanel(30, ClientApp.COLOR_ACCENT);
+            RoundedPanel avatar = new RoundedPanel(30, GUIUtils.COLOR_ACCENT);
             avatar.setPreferredSize(new Dimension(30, 30));
             avatar.setLayout(new GridBagLayout());
             avatar.add(new JLabel("8")); // Placeholder icon
@@ -245,7 +245,7 @@ public class LiveChat extends JPanel {
         actions.setOpaque(false);
         
         JLabel btnSend = new JLabel("➤"); // Ganti icon_send.png
-        btnSend.setForeground(ClientApp.COLOR_PRIMARY); // Warna Pink
+        btnSend.setForeground(GUIUtils.COLOR_PRIMARY); // Warna Pink
 
         btnSend.addMouseListener(new MouseAdapter() {
             @Override
