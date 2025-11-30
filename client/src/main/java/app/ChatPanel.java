@@ -21,6 +21,7 @@ public class ChatPanel extends JPanel {
     public ChatPanel() {
         setLayout(new BorderLayout(20, 20));
         setOpaque(false);
+
         JLabel lblHeader = new JLabel("Live Chat");
         lblHeader.setFont(AppColor.FONT_HEADER);
         add(lblHeader, BorderLayout.NORTH);
@@ -28,7 +29,7 @@ public class ChatPanel extends JPanel {
         JPanel chatContainer = new JPanel(new BorderLayout(15, 0));
         chatContainer.setOpaque(false);
 
-        // LEFT
+        // --- LEFT SIDEBAR ---
         StyleUtils.RoundedPanel contactPanel = new StyleUtils.RoundedPanel(15, Color.WHITE);
         contactPanel.setLayout(new BorderLayout());
         contactPanel.setPreferredSize(new Dimension(280, 0));
@@ -42,7 +43,8 @@ public class ChatPanel extends JPanel {
 
         contactDisplayModel = new DefaultListModel<>();
         allContactsList = new ArrayList<>();
-        addNewChatSession("Wahyunii"); addNewChatSession("Budi");
+        addNewChatSession("Wahyunii"); 
+        addNewChatSession("Budi");
         
         listContacts = new JList<>(contactDisplayModel);
         listContacts.setFont(new Font("SansSerif", Font.PLAIN, 14));
@@ -58,7 +60,7 @@ public class ChatPanel extends JPanel {
             public void keyReleased(KeyEvent e) { filterContacts(txtSearchContact.getText()); }
         });
 
-        // RIGHT
+        // --- RIGHT CHAT AREA ---
         StyleUtils.RoundedPanel chatAreaPanel = new StyleUtils.RoundedPanel(15, new Color(245, 245, 245));
         chatAreaPanel.setLayout(new BorderLayout());
         chatAreaPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -71,6 +73,7 @@ public class ChatPanel extends JPanel {
         pnlChatMessages = new JPanel();
         pnlChatMessages.setLayout(new BoxLayout(pnlChatMessages, BoxLayout.Y_AXIS));
         pnlChatMessages.setBackground(new Color(245, 245, 245));
+        
         JScrollPane scrollChat = new JScrollPane(pnlChatMessages);
         scrollChat.setBorder(null);
         scrollChat.getVerticalScrollBar().setUnitIncrement(16);
@@ -78,22 +81,28 @@ public class ChatPanel extends JPanel {
         JPanel inputPanel = new JPanel(new BorderLayout(10, 10));
         inputPanel.setOpaque(false);
         inputPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-        txtChatInput = StyleUtils.createModernTextField(); txtChatInput.setPreferredSize(new Dimension(0, 45));
+        txtChatInput = StyleUtils.createModernTextField(); 
+        txtChatInput.setPreferredSize(new Dimension(0, 45));
+        
         JButton btnSend = StyleUtils.createRoundedButton("Kirim", AppColor.PRIMARY_PURPLE, Color.WHITE);
         btnSend.setPreferredSize(new Dimension(80, 45));
-        inputPanel.add(txtChatInput, BorderLayout.CENTER); inputPanel.add(btnSend, BorderLayout.EAST);
+        inputPanel.add(txtChatInput, BorderLayout.CENTER); 
+        inputPanel.add(btnSend, BorderLayout.EAST);
 
         chatAreaPanel.add(lblChatTarget, BorderLayout.NORTH);
         chatAreaPanel.add(scrollChat, BorderLayout.CENTER);
         chatAreaPanel.add(inputPanel, BorderLayout.SOUTH);
 
+        // --- LOGIC ---
         listContacts.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 String sel = listContacts.getSelectedValue();
                 if(sel != null) {
                     lblChatTarget.setText(sel);
                     pnlChatMessages.removeAll();
-                    addMessageToChat("Halo min", "10:30", false);
+                    // Simulasi Chat History
+                    addMessageToChat("Halo min", "10:30", false, true); // Pesan Masuk (Read)
+                    addMessageToChat("Halo kak, ada yang bisa dibantu?", "10:31", true, true); // Balasan Admin (Read)
                     pnlChatMessages.revalidate(); pnlChatMessages.repaint();
                 }
             }
@@ -104,26 +113,30 @@ public class ChatPanel extends JPanel {
             if (listContacts.getSelectedValue() == null) { JOptionPane.showMessageDialog(this, "Pilih kontak!"); return; }
             if(!msg.isEmpty()) {
                 String time = new SimpleDateFormat("HH:mm").format(new Date());
-                addMessageToChat(msg, time, true);
+                // Kirim Pesan Admin (isMe=true, isRead=false -> Baru terkirim)
+                addMessageToChat(msg, time, true, false);
                 txtChatInput.setText("");
                 SwingUtilities.invokeLater(() -> scrollChat.getVerticalScrollBar().setValue(scrollChat.getVerticalScrollBar().getMaximum()));
             }
         };
-        btnSend.addActionListener(sendAction); txtChatInput.addActionListener(sendAction);
+        btnSend.addActionListener(sendAction); 
+        txtChatInput.addActionListener(sendAction);
 
         chatContainer.add(contactPanel, BorderLayout.WEST);
         chatContainer.add(chatAreaPanel, BorderLayout.CENTER);
         add(chatContainer, BorderLayout.CENTER);
     }
 
-    private void addMessageToChat(String message, String time, boolean isMe) {
+    // Update Method: Tambah parameter isRead
+    private void addMessageToChat(String message, String time, boolean isMe, boolean isRead) {
         JPanel wrapper = new JPanel(new FlowLayout(isMe ? FlowLayout.RIGHT : FlowLayout.LEFT));
         wrapper.setOpaque(false);
-        ChatBubble bubble = new ChatBubble(message, time, isMe);
+        ChatBubble bubble = new ChatBubble(message, time, isMe, isRead);
         wrapper.add(bubble);
         pnlChatMessages.add(wrapper);
         pnlChatMessages.add(Box.createRigidArea(new Dimension(0, 5)));
-        pnlChatMessages.revalidate(); pnlChatMessages.repaint();
+        pnlChatMessages.revalidate(); 
+        pnlChatMessages.repaint();
     }
 
     private void addNewChatSession(String name) {
@@ -139,21 +152,45 @@ public class ChatPanel extends JPanel {
         }
     }
 
+    // --- CUSTOM BUBBLE CHAT WITH STATUS ---
     private class ChatBubble extends JPanel {
-        public ChatBubble(String msg, String time, boolean isMe) {
-            setLayout(new BorderLayout()); setOpaque(false);
+        public ChatBubble(String msg, String time, boolean isMe, boolean isRead) {
+            setLayout(new BorderLayout()); 
+            setOpaque(false);
             setBorder(new EmptyBorder(10, 15, 10, 15));
             setBackground(isMe ? new Color(225, 245, 254) : Color.WHITE);
+
             JLabel lblMsg = new JLabel("<html><p style='width: 200px'>"+msg+"</p></html>");
             lblMsg.setFont(new Font("SansSerif", Font.PLAIN, 14));
+            
+            // Status Panel (Jam + Centang)
+            JPanel pnlStatus = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+            pnlStatus.setOpaque(false);
+            
             JLabel lblTime = new JLabel(time);
-            lblTime.setFont(new Font("SansSerif", Font.PLAIN, 10)); lblTime.setForeground(Color.GRAY);
-            lblTime.setHorizontalAlignment(SwingConstants.RIGHT);
-            add(lblMsg, BorderLayout.CENTER); add(lblTime, BorderLayout.SOUTH);
+            lblTime.setFont(new Font("SansSerif", Font.PLAIN, 10)); 
+            lblTime.setForeground(Color.GRAY);
+            
+            pnlStatus.add(lblTime);
+
+            // Icon Status (Hanya untuk pesan Admin)
+            if(isMe) {
+                JLabel lblTick = new JLabel(isRead ? "✓✓" : "✓");
+                lblTick.setFont(new Font("SansSerif", Font.BOLD, 10));
+                lblTick.setForeground(isRead ? new Color(33, 150, 243) : Color.GRAY); // Biru jika Read, Abu jika Sent
+                pnlStatus.add(lblTick);
+            }
+
+            add(lblMsg, BorderLayout.CENTER); 
+            add(pnlStatus, BorderLayout.SOUTH);
         }
-        @Override protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g; g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(getBackground()); g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+        
+        @Override 
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g; 
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(getBackground()); 
+            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
             super.paintComponent(g);
         }
     }

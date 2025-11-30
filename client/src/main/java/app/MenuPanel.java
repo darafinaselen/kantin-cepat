@@ -47,7 +47,7 @@ public class MenuPanel extends JPanel {
         pnlHarga.add(lblRp, BorderLayout.WEST); pnlHarga.add(txtHargaMenu, BorderLayout.CENTER);
 
         cbKategoriMenu = new JComboBox<>(new String[]{"MEALS", "DRINK", "SNACK"});
-        cbStatusMenu = new JComboBox<>(new String[]{"Available", "Empty"});
+        cbStatusMenu = new JComboBox<>(new String[]{"TRUE (Available)", "FALSE (Empty)"});
         
         lblImagePreview = new JLabel("No Image", SwingConstants.CENTER);
         lblImagePreview.setPreferredSize(new Dimension(140, 140));
@@ -64,12 +64,19 @@ public class MenuPanel extends JPanel {
         gbc.gridx = 2; gbc.gridy = 0; gbc.gridheight = 4; gbc.fill = GridBagConstraints.NONE; formCard.add(lblImagePreview, gbc);
         gbc.gridx = 2; gbc.gridy = 4; gbc.gridheight = 1; gbc.fill = GridBagConstraints.HORIZONTAL; formCard.add(btnPilihFoto, gbc);
 
+        // --- BUTTONS (FIX: ADA EDIT KUNING) ---
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         btnPanel.setOpaque(false);
         JButton btnAdd = StyleUtils.createRoundedButton("Tambah", AppColor.BTN_SUCCESS, Color.WHITE);
+        JButton btnEdit = StyleUtils.createRoundedButton("Edit", AppColor.BTN_YELLOW, Color.BLACK); // Tombol Kuning
         JButton btnDel = StyleUtils.createRoundedButton("Hapus", AppColor.BTN_RED, Color.WHITE);
         JButton btnReset = StyleUtils.createRoundedButton("Reset", AppColor.BTN_MAROON, Color.WHITE);
-        btnPanel.add(btnAdd); btnPanel.add(btnDel); btnPanel.add(btnReset);
+        
+        btnPanel.add(btnAdd); 
+        btnPanel.add(btnEdit); 
+        btnPanel.add(btnDel); 
+        btnPanel.add(btnReset);
+        
         gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 3; formCard.add(btnPanel, gbc);
 
         // TABLE
@@ -98,7 +105,6 @@ public class MenuPanel extends JPanel {
             
             btnAdd.setEnabled(false); btnAdd.setText("Loading...");
             new Thread(() -> {
-                // KIRIM FORMAT BARU (DENGAN DESKRIPSI)
                 String msg = "ADD_MENU;" + n + ";" + d + ";" + p + ";" + c + ";" + s;
                 String resp = socketService.sendRequest(msg);
                 SwingUtilities.invokeLater(() -> {
@@ -109,6 +115,27 @@ public class MenuPanel extends JPanel {
                     btnAdd.setEnabled(true); btnAdd.setText("Tambah");
                 });
             }).start();
+        });
+
+        // LOGIC EDIT
+        btnEdit.addActionListener(e -> {
+            int r = table.getSelectedRow();
+            if (r >= 0) {
+                model.setValueAt(txtNamaMenu.getText(), r, 2);
+                model.setValueAt(txtDeskripsiMenu.getText(), r, 3);
+                model.setValueAt(txtHargaMenu.getText(), r, 4);
+                model.setValueAt(cbKategoriMenu.getSelectedItem(), r, 5);
+                String status = (String) cbStatusMenu.getSelectedItem();
+                model.setValueAt(status.startsWith("TRUE"), r, 6);
+                
+                if(selectedMenuIcon != null) {
+                    model.setValueAt(StyleUtils.resizeImage(selectedMenuIcon, 60, 60), r, 0);
+                }
+                clearForm();
+                JOptionPane.showMessageDialog(this, "Data berhasil diubah (GUI Only)!");
+            } else {
+                JOptionPane.showMessageDialog(this, "Pilih baris yang ingin diedit!");
+            }
         });
 
         btnDel.addActionListener(e -> { if(table.getSelectedRow()>=0) model.removeRow(table.getSelectedRow()); });

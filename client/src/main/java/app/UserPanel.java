@@ -16,7 +16,7 @@ public class UserPanel extends JPanel {
         setLayout(new BorderLayout(20, 20));
         setOpaque(false);
 
-        JLabel lblHeader = new JLabel("Kelola Pengguna (Table: users)");
+        JLabel lblHeader = new JLabel("Kelola Pengguna");
         lblHeader.setFont(AppColor.FONT_HEADER);
         add(lblHeader, BorderLayout.NORTH);
 
@@ -44,12 +44,19 @@ public class UserPanel extends JPanel {
         addFormRow(formCard, gbc, 4, "No HP:", txtPhoneApp);
         addFormRow(formCard, gbc, 5, "Role:", cbRoleApp);
 
+        // --- BUTTONS (FIX: ADA EDIT) ---
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         btnPanel.setOpaque(false);
         JButton btnAdd = StyleUtils.createRoundedButton("Tambah", AppColor.BTN_SUCCESS, Color.WHITE);
+        JButton btnEdit = StyleUtils.createRoundedButton("Edit", AppColor.BTN_YELLOW, Color.BLACK); // <-- ADA TOMBOL UBAH
         JButton btnDel = StyleUtils.createRoundedButton("Hapus", AppColor.BTN_RED, Color.WHITE);
         JButton btnReset = StyleUtils.createRoundedButton("Reset", AppColor.BTN_MAROON, Color.WHITE);
-        btnPanel.add(btnAdd); btnPanel.add(btnDel); btnPanel.add(btnReset);
+        
+        btnPanel.add(btnAdd); 
+        btnPanel.add(btnEdit); // <-- Dimasukkan ke Panel
+        btnPanel.add(btnDel); 
+        btnPanel.add(btnReset);
+        
         gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 2; formCard.add(btnPanel, gbc);
 
         String[] cols = {"ID", "Username", "Email", "Nama Lengkap", "No HP", "Role"};
@@ -63,6 +70,18 @@ public class UserPanel extends JPanel {
         scroll.setBorder(BorderFactory.createEmptyBorder());
 
         // LOGIC
+        table.addMouseListener(new MouseAdapter() {
+            public void mouseClicked(MouseEvent e) {
+                int r = table.getSelectedRow();
+                txtUserApp.setText(model.getValueAt(r, 1).toString());
+                txtEmailApp.setText(model.getValueAt(r, 2).toString());
+                txtFullNameApp.setText(model.getValueAt(r, 3).toString());
+                txtPhoneApp.setText(model.getValueAt(r, 4).toString());
+                cbRoleApp.setSelectedItem(model.getValueAt(r, 5).toString());
+                txtPassApp.setText("");
+            }
+        });
+        
         btnAdd.addActionListener(e -> { 
             btnAdd.setEnabled(false);
             new Thread(() -> {
@@ -77,6 +96,22 @@ public class UserPanel extends JPanel {
                 });
             }).start();
         });
+
+        // LOGIC EDIT (GUI ONLY)
+        btnEdit.addActionListener(e -> {
+            int r = table.getSelectedRow();
+            if(r >= 0) {
+                model.setValueAt(txtEmailApp.getText(), r, 2);
+                model.setValueAt(txtFullNameApp.getText(), r, 3);
+                model.setValueAt(txtPhoneApp.getText(), r, 4);
+                model.setValueAt(cbRoleApp.getSelectedItem(), r, 5);
+                clearForm();
+                JOptionPane.showMessageDialog(this, "Data User Diubah!");
+            } else {
+                JOptionPane.showMessageDialog(this, "Pilih user dulu!");
+            }
+        });
+
         btnDel.addActionListener(e -> { if(table.getSelectedRow()>=0) model.removeRow(table.getSelectedRow()); });
         btnReset.addActionListener(e -> clearForm());
 
