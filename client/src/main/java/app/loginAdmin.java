@@ -3,268 +3,166 @@ package app;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.net.URL;
-import java.awt.geom.RoundRectangle2D;
+import java.awt.event.*;
 
-public class loginAdmin extends JFrame {
+public class LoginAdmin extends JFrame {
 
-    // Warna tema
-    private static final Color COLOR_ORANGE = new Color(0xFFFFFF);
-    private static final Color COLOR_BG_LIGHT  = new Color(0xCCF3D1);  // hijau pastel muda
-    private static final Color COLOR_TEXT_DARK = new Color(0x263238);
-    private static final Color COLOR_PRIMARY   = new Color(0x2E7D32);
-
-    private final JTextField tfUsername     = new JTextField(20);
-    private final JPasswordField pfPassword = new JPasswordField(20);
-    private final JCheckBox cbShowPass      = new JCheckBox("Show password");
-    private final RoundedButton btnLogin    = new RoundedButton("Login");
-
-    public static void main(String[] args) {
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ignored) {}
-
-        SwingUtilities.invokeLater(() -> new loginAdmin().setVisible(true));
-    }
-
-    public loginAdmin() {
-        super("Kantin Cepat — Login Admin");
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(900, 520);
+    public LoginAdmin() {
+        setTitle("Login Admin - Kantin Cepat");
+        setSize(900, 600);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        setResizable(false);
+        setLayout(new GridLayout(1, 2)); // Split 50:50
 
-        setLayout(new BorderLayout());
-        add(buildLeftPanel(), BorderLayout.WEST);
-        add(buildRightPanel(), BorderLayout.CENTER);
+        // --- PANEL KIRI (Ungu & Gambar) ---
+        JPanel leftPanel = new JPanel();
+        // GANTI: Menggunakan Ungu Utama agar senada
+        leftPanel.setBackground(AppColor.PRIMARY_PURPLE); 
+        leftPanel.setLayout(new GridBagLayout()); // Untuk centering konten
 
-        getRootPane().setDefaultButton(btnLogin);
-    }
-
-    // ======================= PANEL KIRI ==========================
-    private JPanel buildLeftPanel() {
-        JPanel left = new JPanel(new BorderLayout());
-        left.setPreferredSize(new Dimension(360, getHeight()));
-        // margin oranye di sekeliling kartu
-        left.setBorder(new EmptyBorder(20, 20, 20, 20));
-        left.setBackground(COLOR_ORANGE);
-
-        // Load gambar background
-        ImageIcon bgIcon = loadImage("/images/kantin.jpg");
-
-        // Panel gambar rounded yang mengisi penuh panel kiri (minus border)
-        RoundedImagePanel card = new RoundedImagePanel(bgIcon);
-        card.setLayout(new BorderLayout());
-        card.setOpaque(false);
-
-        // Logo di pojok kiri atas gambar (seperti contoh)
-        ImageIcon logoIcon = loadImage("/images/logo.png");
-        JLabel logoLabel;
-        if (logoIcon != null) {
-            Image scaledLogo = logoIcon.getImage()
-                    .getScaledInstance(70, 70, Image.SCALE_SMOOTH);
-            logoLabel = new JLabel(new ImageIcon(scaledLogo));
-        } else {
-            logoLabel = new JLabel("Kantin Cepat");
-        }
-
-        JPanel logoWrapper = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 20));
-        logoWrapper.setOpaque(false);
-        logoWrapper.add(logoLabel);
-
-        card.add(logoWrapper, BorderLayout.NORTH);
-
-        // kartu langsung ditaruh di CENTER, jadi dia membesar mengikuti panel kiri
-        left.add(card, BorderLayout.CENTER);
-
-        return left;
-    }
-
-    private ImageIcon loadImage(String path) {
+        // Card Putih di dalam panel ungu
+        JPanel imageCard = new JPanel();
+        imageCard.setPreferredSize(new Dimension(300, 400));
+        imageCard.setBackground(Color.WHITE);
+        imageCard.setLayout(new BorderLayout()); 
+        
+        // Load Gambar kantin.jpg
+        JLabel imageLabel = new JLabel();
+        imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
         try {
-            URL url = getClass().getResource(path);
-            System.out.println("Load image " + path + " -> " + url);
-            if (url != null) {
-                return new ImageIcon(url);
-            }
+            // Mengambil gambar dari resources
+            ImageIcon icon = new ImageIcon(getClass().getResource("/images/kantin.jpg"));
+            // Resize gambar
+            Image img = icon.getImage().getScaledInstance(280, 280, Image.SCALE_SMOOTH);
+            imageLabel.setIcon(new ImageIcon(img));
         } catch (Exception e) {
-            e.printStackTrace();
+            imageLabel.setText("Image not found");
         }
-        return null;
-    }
 
-    // ======================= PANEL KANAN (FORM LOGIN) ==========================
-    private JPanel buildRightPanel() {
-        JPanel right = new JPanel(new GridBagLayout());
-        right.setBackground(COLOR_BG_LIGHT);
+        imageCard.add(imageLabel, BorderLayout.CENTER);
+        
+        // Efek Rounded sederhana
+        imageCard.setBorder(BorderFactory.createLineBorder(Color.WHITE, 10));
+        leftPanel.add(imageCard);
 
-        JPanel card = new JPanel(new GridBagLayout());
-        card.setBackground(Color.WHITE);
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(230, 230, 230)),
-                new EmptyBorder(24, 32, 28, 32)
-        ));
-
-        GridBagConstraints c = new GridBagConstraints();
-        c.insets = new Insets(6, 6, 6, 6);
-        c.gridx = 0;
-        c.fill = GridBagConstraints.HORIZONTAL;
-        c.weightx = 1.0;
+        // --- PANEL KANAN (Form Login) ---
+        JPanel rightPanel = new JPanel();
+        rightPanel.setBackground(Color.WHITE);
+        rightPanel.setLayout(new GridBagLayout());
+        
+        JPanel formPanel = new JPanel();
+        formPanel.setBackground(Color.WHITE);
+        formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
+        formPanel.setBorder(new EmptyBorder(20, 40, 20, 40));
 
         JLabel lblTitle = new JLabel("Login Admin");
-        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        lblTitle.setForeground(COLOR_TEXT_DARK);
+        lblTitle.setFont(AppColor.FONT_HEADER);
+        lblTitle.setForeground(AppColor.TEXT_MAIN);
+        lblTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel lblDesc = new JLabel("Masuk untuk mengelola menu dan pengguna.");
-        lblDesc.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblDesc.setForeground(new Color(120, 120, 120));
+        JLabel lblSub = new JLabel("Masuk untuk mengelola kantin");
+        lblSub.setFont(AppColor.FONT_SUBTITLE);
+        lblSub.setForeground(Color.GRAY);
+        lblSub.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        c.gridy = 0; card.add(lblTitle, c);
-        c.gridy = 1; card.add(lblDesc, c);
+        // Field Username
+        JLabel lblUser = new JLabel("Username");
+        lblUser.setFont(AppColor.FONT_BOLD);
+        JTextField txtUser = new JTextField();
+        styleTextField(txtUser);
 
-        c.gridy = 2; card.add(new JLabel("Username"), c);
-        c.gridy = 3;
-        styleTextField(tfUsername);
-        tfUsername.setText("admin");
-        card.add(tfUsername, c);
+        // Field Password
+        JLabel lblPass = new JLabel("Password");
+        lblPass.setFont(AppColor.FONT_BOLD);
+        JPasswordField txtPass = new JPasswordField();
+        styleTextField(txtPass);
 
-        c.gridy = 4; card.add(new JLabel("Password"), c);
-        c.gridy = 5;
-        styleTextField(pfPassword);
-        pfPassword.setText("1234");
-        pfPassword.setEchoChar('•');
-        card.add(pfPassword, c);
-
-        c.gridy = 6;
-        cbShowPass.setOpaque(false);
-        card.add(cbShowPass, c);
-
-        // tombol Login
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        btnPanel.setOpaque(false);
-        btnLogin.setBackground(COLOR_PRIMARY);
-        btnLogin.setForeground(Color.WHITE);
-        btnPanel.add(btnLogin);
-
-        c.gridy = 7;
-        c.insets = new Insets(20, 6, 6, 6);
-        card.add(btnPanel, c);
-
-        // action
-        btnLogin.addActionListener(e -> doLogin());
-        cbShowPass.addActionListener(e -> togglePassword());
-
-        right.add(card);
-        return right;
-    }
-
-    private void styleTextField(JTextField tf) {
-        tf.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        tf.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(190, 190, 190)),
-                new EmptyBorder(6, 8, 6, 8)
-        ));
-    }
-
-    private void togglePassword() {
-        pfPassword.setEchoChar(cbShowPass.isSelected() ? 0 : '•');
-    }
-
-    private void doLogin() {
-    String user = tfUsername.getText().trim();
-    String pass = new String(pfPassword.getPassword());
-
-    if (user.equals("admin") && pass.equals("1234")) {
-        // buka frame dashboard
-        SwingUtilities.invokeLater(() -> {
-            new adminDashboard().setVisible(true);
+        // Show Password Checkbox
+        JCheckBox chkShow = new JCheckBox("Tampilkan Password");
+        chkShow.setBackground(Color.WHITE);
+        chkShow.setFont(AppColor.FONT_REGULAR);
+        chkShow.addActionListener(e -> {
+            if (chkShow.isSelected()) {
+                txtPass.setEchoChar((char) 0);
+            } else {
+                txtPass.setEchoChar('•');
+            }
         });
-        dispose(); // tutup jendela login
-    } else {
-        JOptionPane.showMessageDialog(this,
-                "Username atau password salah.",
-                "Error", JOptionPane.ERROR_MESSAGE);
-    }
-}
 
+        // Tombol Login
+        JButton btnLogin = new JButton("LOGIN");
+        // GANTI: Tombol Login jadi Ungu
+        styleButton(btnLogin, AppColor.PRIMARY_PURPLE, Color.WHITE); 
+        btnLogin.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        // Action Login
+        btnLogin.addActionListener(e -> {
+            String user = txtUser.getText();
+            String pass = new String(txtPass.getPassword());
 
-    // ======================= PANEL GAMBAR ROUNDED ==========================
-    private static class RoundedImagePanel extends JPanel {
-        private final Image image;
+            // TODO: Sambungkan ke Database/Socket Server Developer A nanti
+            if (user.equals("admin") && pass.equals("admin123")) {
+                new AdminDashboard().setVisible(true);
+                this.dispose(); // Tutup window login
+            } else {
+                JOptionPane.showMessageDialog(this, "Username atau Password salah!", "Login Gagal", JOptionPane.ERROR_MESSAGE);
+            }
+        });
 
-        public RoundedImagePanel(ImageIcon icon) {
-            this.image = (icon != null) ? icon.getImage() : null;
-            setOpaque(false);
-        }
+        // Menyusun Komponen
+        formPanel.add(lblTitle);
+        formPanel.add(lblSub);
+        formPanel.add(Box.createRigidArea(new Dimension(0, 30)));
+        formPanel.add(lblUser);
+        formPanel.add(txtUser);
+        formPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        formPanel.add(lblPass);
+        formPanel.add(txtPass);
+        formPanel.add(chkShow);
+        formPanel.add(Box.createRigidArea(new Dimension(0, 30)));
+        formPanel.add(btnLogin);
 
-        @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
+        rightPanel.add(formPanel);
 
-            if (image == null) return;
-
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                    RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
-                    RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-
-            int arc = 40;
-
-            Shape clip = new RoundRectangle2D.Float(
-                    0, 0, getWidth(), getHeight(), arc, arc
-            );
-            g2.setClip(clip);
-
-            int panelW = getWidth();
-            int panelH = getHeight();
-            int imgW = image.getWidth(null);
-            int imgH = image.getHeight(null);
-
-            // scale cover seperti CSS object-fit: cover
-            float scale = Math.max((float) panelW / imgW, (float) panelH / imgH);
-            int newW = (int) (imgW * scale);
-            int newH = (int) (imgH * scale);
-
-            int x = (panelW - newW) / 2;
-            int y = (panelH - newH) / 2;
-
-            g2.drawImage(image, x, y, newW, newH, null);
-            g2.dispose();
-        }
+        // Add panels to frame
+        add(leftPanel);
+        add(rightPanel);
     }
 
-    // ======================= BUTTON MODERN ==========================
-    static class RoundedButton extends JButton {
-        public RoundedButton(String text) {
-            super(text);
-            setFocusPainted(false);
-            setBorderPainted(false);
-            setContentAreaFilled(false);
-            setFont(new Font("Segoe UI", Font.BOLD, 14));
-            setMargin(new Insets(8, 20, 8, 20));
-        }
+    // Helper Styling Text Field
+    private void styleTextField(JTextField field) {
+        field.setPreferredSize(new Dimension(300, 35));
+        field.setMaximumSize(new Dimension(400, 35));
+        field.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1),
+            BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        field.setAlignmentX(Component.LEFT_ALIGNMENT);
+    }
 
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
+    // Helper Styling Button
+    private void styleButton(JButton btn, Color bg, Color fg) {
+        btn.setPreferredSize(new Dimension(300, 45));
+        btn.setMaximumSize(new Dimension(400, 45));
+        btn.setBackground(bg);
+        btn.setForeground(fg);
+        btn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        // Efek Hover
+        btn.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                btn.setBackground(bg.brighter());
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                btn.setBackground(bg);
+            }
+        });
+    }
 
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-            Color base = getBackground();
-            if (getModel().isPressed())  base = base.darker();
-            if (getModel().isRollover()) base = base.brighter();
-
-            g2.setColor(base);
-            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 18, 18);
-
-            g2.setColor(getForeground());
-            FontMetrics fm = g2.getFontMetrics();
-            int x = (getWidth() - fm.stringWidth(getText())) / 2;
-            int y = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
-            g2.drawString(getText(), x, y);
-
-            g2.dispose();
-        }
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new LoginAdmin().setVisible(true));
     }
 }
