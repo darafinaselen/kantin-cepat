@@ -1,148 +1,84 @@
 package com.tubes.kantincepat.client.view;
 
-import java.sql.*;
-import java.text.NumberFormat;
-import java.text.SimpleDateFormat;
+import com.tubes.kantincepat.client.net.ClientSocket;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 public class OrderServices {
 
     public static int saveOrder(int userId, long totalAmount, String globalNote, List<MenuItem> cartItems) {
-        int generatedOrderId = -1;
-        
-        // 1. Insert Header ke tabel 'orders'
-        String insertOrderSQL = "INSERT INTO orders (user_id, total_amount, status) VALUES (?, ?, ?::order_status)";
-        
-        // 2. Insert Detail ke tabel 'order_details'
-        String insertDetailSQL = "INSERT INTO order_details (order_id, menu_id, quantity, subtotal, notes) VALUES (?, ?, ?, ?, ?)";
+        StringBuilder itemsStr = new StringBuilder();
 
-        try (Connection conn = koneksiDB.getConnection()) {
-            conn.setAutoCommit(false); // Transaksi ON
-
-            // --- EKSEKUSI HEADER ---
-            PreparedStatement psOrder = conn.prepareStatement(insertOrderSQL, Statement.RETURN_GENERATED_KEYS);
-            psOrder.setInt(1, userId);
-            psOrder.setBigDecimal(2, java.math.BigDecimal.valueOf(totalAmount));
-            psOrder.setString(3, "PENDING"); // Default status enum
-            psOrder.executeUpdate();
-
-            ResultSet rs = psOrder.getGeneratedKeys();
-            if (rs.next()) {
-                generatedOrderId = rs.getInt(1);
-            } else {
-                throw new SQLException("Gagal mendapatkan Order ID.");
-            }
-
-            // --- EKSEKUSI DETAIL ---
-            // Grouping item
-            Map<Integer, Integer> qtyMap = new HashMap<>();
-            Map<Integer, Integer> priceMap = new HashMap<>();
-
-            for (MenuItem item : cartItems) {
-                qtyMap.put(item.id, qtyMap.getOrDefault(item.id, 0) + 1);
-                priceMap.put(item.id, item.rawPrice);
-            }
-
-            PreparedStatement psDetail = conn.prepareStatement(insertDetailSQL);
-            for (Map.Entry<Integer, Integer> entry : qtyMap.entrySet()) {
-                int menuId = entry.getKey();
-                int qty = entry.getValue();
-                int price = priceMap.get(menuId);
-                long subtotal = (long) price * qty; // Hitung subtotal
-
-                psDetail.setInt(1, generatedOrderId);
-                psDetail.setInt(2, menuId);
-                psDetail.setInt(3, qty);
-                psDetail.setBigDecimal(4, java.math.BigDecimal.valueOf(subtotal));
-                psDetail.setString(5, globalNote); // Simpan note di setiap item
-                
-                psDetail.addBatch();
-            }
-            psDetail.executeBatch();
-
-            conn.commit(); // Simpan permanen
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return -1;
+        // Grouping dulu (supaya kalau ada 2 Nasi Goreng jadi satu entry x2)
+        Map<Integer, Integer> qtyMap = new HashMap<>();
+        for (MenuItem item : cartItems) {
+            qtyMap.put(item.id, qtyMap.getOrDefault(item.id, 0) + 1);
         }
-        return generatedOrderId;
+
+        int count = 0;
+        for (Map.Entry<Integer, Integer> entry : qtyMap.entrySet()) {
+            if (count > 0) itemsStr.append(";"); // Pemisah antar menu
+            itemsStr.append(entry.getKey()).append(",").append(entry.getValue());
+            count++;
+        }
+
+        String payload = "CREATE_ORDER:" + userId + ":" + totalAmount + ":" + globalNote + ":" + itemsStr.toString();
+        String response = ClientSocket.getInstance().sendRequest(payload);
+
+        
+        if (response != null && response.startsWith("ORDER_SUCCESS")) {
+            try {
+                String idStr = response.split(":")[1];
+                return Integer.parseInt(idStr);
+            } catch (Exception e) {
+                return -1;
+            }
+        }
+        
+        return -1;
     }
-
     public static List<Order> getOrdersByCustomer(int userId) {
-        List<Order> orderList = new ArrayList<>();
+        // 1. Kirim request ke Server
+        String payload = "GET_HISTORY:" + userId;
+        String response = ClientSocket.getInstance().sendRequest(payload);
         
-        // Ambil Header
-        String sqlOrder = "SELECT * FROM orders WHERE user_id = ? ORDER BY order_date DESC";
-        
-        // Ambil Detail (Join ke menu_items)
-        String sqlDetail = "SELECT od.quantity, od.notes, m.menu_id, m.name, m.price, m.image_path, m.category " +
-                           "FROM order_details od " +
-                           "JOIN menu_items m ON od.menu_id = m.menu_id " +
-                           "WHERE od.order_id = ?";
+        List<Order> historyList = new ArrayList<>();
 
-        try (Connection conn = koneksiDB.getConnection();
-             PreparedStatement psOrder = conn.prepareStatement(sqlOrder)) {
+        // 2. Parsing Balasan Server
+        // Format Harapan: HISTORY_DATA:ID|Date|Total|Status|ItemsSummary;ID|...
+        if (response != null && response.startsWith("HISTORY_DATA:")) {
+            
+            // Cek apakah datanya kosong (cuma header doang)
+            if (response.length() <= 13) return historyList; 
 
-            psOrder.setInt(1, userId);
-            ResultSet rsOrder = psOrder.executeQuery();
-
-            while (rsOrder.next()) {
-                int orderId = rsOrder.getInt("order_id");
-                int totalAmount = rsOrder.getBigDecimal("total_amount").intValue();
-                String status = rsOrder.getString("status");
-                Timestamp timestamp = rsOrder.getTimestamp("order_date"); // Kolom baru
-                
-                SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy, HH:mm");
-                String dateStr = (timestamp != null) ? sdf.format(timestamp) : "-";
-                
-                NumberFormat nf = NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
-                String priceStr = nf.format(totalAmount).replace(",00", "");
-
-                List<MenuItem> items = new ArrayList<>();
-                StringBuilder summaryBuilder = new StringBuilder();
-                String retrievedNote = "-"; // Default note
-                
-                try (PreparedStatement psDetail = conn.prepareStatement(sqlDetail)) {
-                    psDetail.setInt(1, orderId);
-                    ResultSet rsDetail = psDetail.executeQuery();
-                    
-                    int count = 0;
-                    while (rsDetail.next()) {
-                        int realMenuId = rsDetail.getInt("menu_id");
-                        String menuName = rsDetail.getString("name");
-                        int menuPrice = rsDetail.getBigDecimal("price").intValue();
-                        int qty = rsDetail.getInt("quantity");
-                        String imgPath = rsDetail.getString("image_path");
-                        String catName = rsDetail.getString("category");
+            String dataPart = response.substring(13); // Hapus "HISTORY_DATA:"
+            if (!dataPart.isEmpty()) {
+                String[] ordersStr = dataPart.split(";");
+                for (String ord : ordersStr) {
+                    try {
+                        String[] fields = ord.split("\\|");
+                        // fields[0]=ID, [1]=Date, [2]=Total, [3]=Status, [4]=Summary
                         
-                        // Ambil note dari salah satu item (karena kita simpan sama semua)
-                        if (count == 0) retrievedNote = rsDetail.getString("notes");
-
-                        // Reconstruct untuk Re-order
-                        for(int k=0; k<qty; k++) {
-                            items.add(new MenuItem(realMenuId, menuName, "", menuPrice, catName, imgPath, true));
+                        if (fields.length >= 5) {
+                            Order o = new Order(
+                                fields[1], // Date
+                                fields[4], // Summary
+                                fields[2], // Total
+                                fields[3], // Status
+                                "-",       // Note (Optional)
+                                null       // List Item detail
+                            );
+                            o.orderId = fields[0];
+                            historyList.add(o);
                         }
-
-                        if (count > 0) summaryBuilder.append(", ");
-                        summaryBuilder.append(menuName).append(" (x").append(qty).append(")");
-                        count++;
+                    } catch (Exception e) {
+                        System.err.println("Gagal parse order history: " + ord);
                     }
                 }
-                
-                Order order = new Order(dateStr, summaryBuilder.toString(), priceStr, status, retrievedNote, items);
-                order.orderId = String.valueOf(orderId);
-                
-                orderList.add(order);
             }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
-        return orderList;
+        return historyList;
     }
 }

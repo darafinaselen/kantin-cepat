@@ -2,29 +2,26 @@ package com.tubes.kantincepat.client.view;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-
 import com.tubes.kantincepat.client.ClientApp;
-
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 public class Menu_Profile extends JPanel {
 
-    private ClientApp ClientApp;
+    private ClientApp mainApp; // Nama variabel diperbaiki
 
     public Menu_Profile(ClientApp app) {
-        this.ClientApp = app;
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS)); // Susunan Vertikal
+        this.mainApp = app;
+        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS)); 
         setBackground(GUIUtils.COLOR_BG2);
         
-        // Padding halaman (Atas, Kiri, Bawah, Kanan)
         setBorder(new EmptyBorder(40, 20, 20, 20));
 
         // 1. Bagian Foto & Info User
         add(createProfileInfo());
         
-        add(Box.createVerticalStrut(40)); // Jarak antara profil dan menu
+        add(Box.createVerticalStrut(40)); 
 
         // 2. Bagian Menu Options
         add(createMenuOption("Language", "Globe.png"));
@@ -33,7 +30,20 @@ public class Menu_Profile extends JPanel {
         add(Box.createVerticalStrut(15));
         add(createMenuOption("Notification", "notifications.png"));
 
-        // Push sisa konten ke atas
+        // Tombol Logout (Tambahan)
+        add(Box.createVerticalStrut(30));
+        JPanel logoutPanel = createMenuOption("Sign Out", "logout.png"); // Pastikan ada icon logout.png atau ganti yg lain
+        logoutPanel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int confirm = JOptionPane.showConfirmDialog(null, "Yakin ingin keluar?", "Logout", JOptionPane.YES_NO_OPTION);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    mainApp.logout(); // Panggil method logout di ClientApp
+                }
+            }
+        });
+        add(logoutPanel);
+
         add(Box.createVerticalGlue());
     }
 
@@ -41,65 +51,61 @@ public class Menu_Profile extends JPanel {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(GUIUtils.COLOR_BG2);
-        panel.setAlignmentX(Component.CENTER_ALIGNMENT); // Rata tengah secara horizontal
+        panel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // A. Container Foto Profil (Kotak Pink Rounded)
-        // Radius 35 agar sudutnya tumpul seperti di gambar (Squircle)
-        JPanel photoContainer = new RoundedPanel(35, GUIUtils.COLOR_ACCENT); 
+        // A. Foto Profil
+        RoundedPanel photoContainer = new RoundedPanel(35, GUIUtils.COLOR_ACCENT); 
         photoContainer.setPreferredSize(new Dimension(100, 100));
         photoContainer.setMaximumSize(new Dimension(100, 100));
-        photoContainer.setLayout(new GridBagLayout()); // Center image inside
+        photoContainer.setLayout(new GridBagLayout());
         
-        // Load Gambar Profil User
-        ImageIcon originalIcon = new ImageIcon("profile.png"); // Pastikan file ini ada
-        Image scaledImage = originalIcon.getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH);
-        JLabel lblPhoto = new JLabel(new ImageIcon(scaledImage));
+        ImageIcon originalIcon = GUIUtils.loadImageIcon("profile.png", 80, 80);
+        if (originalIcon != null) {
+            photoContainer.add(new JLabel(originalIcon));
+        } else {
+            photoContainer.add(new JLabel("IMG"));
+        }
         
-        photoContainer.add(lblPhoto);
+        panel.add(photoContainer);
 
-        // B. Info Teks
-        int currentUserId = 3; 
-        User currentUser = UserServices.getUserById(currentUserId);
-
-        // 2. Siapkan Variabel Default (Jaga-jaga jika DB error/data kosong)
+        // B. Info Teks (Ambil dari ClientApp yang sudah login)
         String displayName = "Guest User";
         String displayPhone = "-";
 
-        if (currentUser != null) {
-            // Gunakan field yang baru (fullName & phoneNumber)
-            displayName = currentUser.fullName; 
-            displayPhone = currentUser.phoneNumber;
+        // PERBAIKAN: Ambil User dari mainApp (Session lokal), gak perlu panggil Service lagi biar cepet
+        if (mainApp.getCurrentUser() != null) {
+            User u = mainApp.getCurrentUser();
+            // PERBAIKAN: Gunakan Getter!
+            displayName = u.getFullName(); 
+            displayPhone = u.getPhoneNumber();
         }
 
-        // 3. Tampilkan ke Label
+        // Tampilkan ke Label
         JLabel lblName = new JLabel(displayName);
         lblName.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 18f));
         lblName.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel lblPhone = new JLabel(displayPhone);
-         lblPhone.setFont(GUIUtils.getCustomFont("Lato-Regular.ttf", 14f));
+        lblPhone.setFont(GUIUtils.getCustomFont("Lato-Regular.ttf", 14f));
         lblPhone.setForeground(Color.GRAY);
         lblPhone.setAlignmentX(Component.CENTER_ALIGNMENT);
         
-        // Susun komponen
-        panel.add(photoContainer);
-        panel.add(Box.createVerticalStrut(15)); // Jarak foto ke nama
+        panel.add(Box.createVerticalStrut(15)); 
         panel.add(lblName);
-        panel.add(Box.createVerticalStrut(5));  // Jarak nama ke nomor
+        panel.add(Box.createVerticalStrut(5));  
         panel.add(lblPhone);
 
         return panel;
     }
 
     private JPanel createMenuOption(String text, String iconPath) {
-        // Container Baris Menu
         JPanel panel = new JPanel(new BorderLayout(15, 0));
-        panel.setBackground(GUIUtils.COLOR_BG2); // Transparan/Warna dasar
-        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60)); // Tinggi fix 60px
+        panel.setBackground(GUIUtils.COLOR_BG2);
+        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60)); 
         panel.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // 1. Icon Kiri (Gambar dalam lingkaran/kotak rounded)
-        JPanel iconContainer = new RoundedPanel(50, GUIUtils.COLOR_ACCENT); // Bulat penuh atau Rounded
+        // 1. Icon Kiri
+        RoundedPanel iconContainer = new RoundedPanel(50, GUIUtils.COLOR_ACCENT); 
         iconContainer.setPreferredSize(new Dimension(45, 45));
         iconContainer.setLayout(new GridBagLayout());
         
@@ -107,32 +113,31 @@ public class Menu_Profile extends JPanel {
         if (menuIcon != null) {
             iconContainer.add(new JLabel(menuIcon));
         } else {
-            iconContainer.add(new JLabel("IMG"));
+            iconContainer.add(new JLabel("?"));
         }
+
         // 2. Teks Tengah
         JLabel lblText = new JLabel(text);
         lblText.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 14f));
 
         // 3. Panah Kanan
-        JLabel lblArrow = new JLabel("›"); // Simbol chevron
+        JLabel lblArrow = new JLabel("›"); 
         lblArrow.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 20f));
         lblArrow.setForeground(Color.GRAY);
-        lblArrow.setBorder(new EmptyBorder(0, 0, 0, 10)); // Padding kanan
+        lblArrow.setBorder(new EmptyBorder(0, 0, 0, 10)); 
 
         panel.add(iconContainer, BorderLayout.WEST);
         panel.add(lblText, BorderLayout.CENTER);
         panel.add(lblArrow, BorderLayout.EAST);
         
-        // Efek Hover sederhana (Opsional)
+        // Efek Hover
         panel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                // Saat hover teks jadi warna primary
                 lblText.setForeground(GUIUtils.COLOR_PRIMARY);
             }
             @Override
             public void mouseExited(MouseEvent e) {
-                // Saat keluar balik jadi hitam
                 lblText.setForeground(Color.BLACK);
             }
         });

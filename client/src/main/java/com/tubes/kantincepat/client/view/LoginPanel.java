@@ -58,9 +58,16 @@ public class LoginPanel extends JPanel {
             
             String response = ClientSocket.getInstance().sendRequest("LOGIN:" + id + ":" + pass);
             if (response != null && response.startsWith("LOGIN_SUCCESS")) {
-                String fullname = response.split(":")[2];
+                String[] parts = response.split(":");
+                String role = parts[1];
+                String fullname = parts[2];
+                int userId = Integer.parseInt(parts[3]);
+                String username = parts[4];
+                String email = parts[5];
+                String phone = parts[6];
                 JOptionPane.showMessageDialog(this, "Welcome, " + fullname);
-                // TODO: mainApp.showView("DASHBOARD");
+                mainApp.setCurrentUser(userId, username, email, fullname, phone, role);
+                mainApp.showView("HOME");
             } else {
                 JOptionPane.showMessageDialog(this, "Login Gagal!");
             }

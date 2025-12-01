@@ -2,22 +2,19 @@ package com.tubes.kantincepat.client.view;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-
 import com.tubes.kantincepat.client.ClientApp;
-
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-// import java.util.Collections;
 import java.util.List;
 
 public class Menu_Orders extends JPanel {
 
-    private ClientApp ClientApp;
+    private ClientApp mainApp;
     private JPanel contentList;
     
     public Menu_Orders(ClientApp app) {
-        this.ClientApp = app;
+        this.mainApp = app;
         setLayout(new BorderLayout());
         setBackground(GUIUtils.COLOR_BG2);
 
@@ -42,12 +39,19 @@ public class Menu_Orders extends JPanel {
     public void refreshOrderData() {
         contentList.removeAll();
 
-        List<Order> dbOrders = OrderServices.getOrdersByCustomer(3); 
-        ClientApp.orderHistory = dbOrders; 
+        int userId = 3;
+        if (mainApp.getCurrentUser() != null) {
+            userId = mainApp.getCurrentUser().getId();
+        }
+
+        List<Order> dbOrders = OrderServices.getOrdersByCustomer(userId);
+        // mainApp.getOrderHistory().clear();
+        // mainApp.getOrderHistory().addAll(dbOrders);
 
         if (dbOrders.isEmpty()) {
             JLabel emptyLabel = new JLabel("Belum ada riwayat pesanan");
             emptyLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            emptyLabel.setFont(GUIUtils.getCustomFont("Lato-Regular.ttf", 12f));
             contentList.add(Box.createVerticalStrut(50));
             contentList.add(emptyLabel);
         } else {
@@ -79,7 +83,7 @@ public class Menu_Orders extends JPanel {
         RoundedPanel card = new RoundedPanel(20, GUIUtils.COLOR_ACCENT);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
-        card.setMaximumSize(new Dimension(300, 160)); 
+        // card.setMaximumSize(new Dimension(300, 160)); 
         card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 160));
 
         // --- BAGIAN ATAS: TANGGAL & STATUS ---
@@ -87,7 +91,7 @@ public class Menu_Orders extends JPanel {
         topRow.setOpaque(false);
         
         JLabel lblDate = new JLabel(order.date); 
-        lblDate.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        lblDate.setFont(GUIUtils.getCustomFont("Lato-Regular.ttf", 12f));
         lblDate.setForeground(Color.GRAY);
 
         JLabel lblStatus = createStatusBadge(order.status);
@@ -113,7 +117,7 @@ public class Menu_Orders extends JPanel {
         lblItems.setToolTipText(fullText);
         
         JLabel lblPrice = new JLabel(order.totalPrice);
-        lblPrice.setFont(new Font("SansSerif", Font.BOLD, 14));
+        lblPrice.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 14f));
         lblPrice.setForeground(GUIUtils.COLOR_PRIMARY);
 
         midPanel.add(lblItems);
@@ -132,7 +136,7 @@ public class Menu_Orders extends JPanel {
             @Override
             public void mouseClicked(MouseEvent e) {
                 // Panggil method di ClientApp sambil membawa data 'order' ini
-                ClientApp.showInvoice(order);
+                mainApp.showInvoice(order);
             }
         });
         
@@ -153,16 +157,16 @@ public class Menu_Orders extends JPanel {
 
                 try {
                     // 2. Kosongkan keranjang saat ini
-                    ClientApp.cartItems.clear();
+                    mainApp.getCartItems().clear();
 
                     // 3. Masukkan barang dari riwayat ke keranjang utama
-                    ClientApp.cartItems.addAll(order.savedItems);
+                    mainApp.getCartItems().addAll(order.savedItems);
                     
                     System.out.println("Berhasil menyalin " + order.savedItems.size() + " item ke keranjang.");
 
                     // 4. Pindah ke halaman Keranjang
                     // Pastikan tulisan "BAG" sesuai dengan yang ada di ClientApp (huruf besar/kecil berpengaruh!)
-                    ClientApp.showView("BAG"); 
+                    mainApp.showView("BAG"); 
                     
                 } catch (Exception ex) {
                     ex.printStackTrace(); // Lihat error di console jika ada
@@ -185,7 +189,7 @@ public class Menu_Orders extends JPanel {
     // Helper untuk membuat Badge Status berwarna-warni
     private JLabel createStatusBadge(String status) {
         JLabel lbl = new JLabel(status, SwingConstants.CENTER);
-        lbl.setFont(new Font("SansSerif", Font.BOLD, 10));
+        lbl.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 10f));
         lbl.setOpaque(true); // Agar background warna muncul
         lbl.setBorder(new EmptyBorder(5, 10, 5, 10)); // Padding dalam badge
 
@@ -209,7 +213,7 @@ public class Menu_Orders extends JPanel {
     private JLabel createActionButton(String text, boolean isPrimary) {
         JLabel btn = new JLabel(text, SwingConstants.CENTER);
         btn.setPreferredSize(new Dimension(80, 30));
-        btn.setFont(new Font("SansSerif", Font.BOLD, 11));
+        btn.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 11f));
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.setOpaque(true);
 

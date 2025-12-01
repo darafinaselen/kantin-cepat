@@ -1,32 +1,31 @@
-// package com.tubes.kantincepat.client.view;
+package com.tubes.kantincepat.client.view;
 
-// import java.sql.Connection;
-// import java.sql.PreparedStatement;
-// import java.sql.ResultSet;
+import com.tubes.kantincepat.client.net.ClientSocket;
 
-// public class UserServices {
+public class UserServices {
 
-//     // Method untuk mengambil data user berdasarkan ID
-//     public static User getUserById(int userId) {
-//         User user = null;
-//         String sql = "SELECT user_id, full_name, phone_number, role FROM users WHERE user_id = ?";
-//         try (Connection conn = koneksiDB.getConnection();
-//              PreparedStatement ps = conn.prepareStatement(sql)) {
+    public static User getUserById(int userId) {
+        String payload = "GET_USER:" + userId;
+        String response = ClientSocket.getInstance().sendRequest(payload);
 
-//             ps.setInt(1, userId);
-//             ResultSet rs = ps.executeQuery();
-
-//             if (rs.next()) {
-//                 // Mapping nama kolom DB baru ke Object User
-//                 String name = rs.getString("full_name"); 
-//                 String phone = rs.getString("phone_number"); 
-//                 String role = rs.getString("role");
-//                 user = new User(userId, name, phone, role);
-//             }
-
-//         } catch (Exception e) {
-//             e.printStackTrace();
-//         }
-//         return user;
-//     }
-// }
+        // Format: USER_DATA:ID:Username:Email:FullName:Phone:Role
+        if (response != null && response.startsWith("USER_DATA:")) {
+            try {
+                String[] parts = response.split(":");
+                // parts[0] = HEADER, parts[1] = ID, parts[2] = Username, dst...
+                
+                return new User(
+                    Integer.parseInt(parts[1]), // ID
+                    parts[2],                   // Username
+                    parts[3],                   // Email
+                    parts[4],                   // FullName
+                    parts[5],                   // Phone
+                    parts[6]                    // Role
+                );
+            } catch (Exception e) {
+                System.err.println("Gagal parse user data");
+            }
+        }
+        return null;
+    }
+}

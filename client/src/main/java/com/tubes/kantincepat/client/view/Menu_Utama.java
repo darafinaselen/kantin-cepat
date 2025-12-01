@@ -134,10 +134,18 @@ public class Menu_Utama extends JPanel {
         JLabel lblWelcome = new JLabel("Welcome Back!!");
         lblWelcome.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 18f));
 
-        ImageIcon scaledImage = new ImageIcon(GUIUtils.loadImageIcon("chat.png", 30, 30).getImage());
-        // Image scaledImage = originalIcon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
+        ImageIcon originalIcon = GUIUtils.loadImageIcon("icon_chat.png", 30, 30);
+        JLabel btnChat;
 
-        JLabel btnChat = new JLabel(scaledImage);
+        // 2. Pengecekan Anti-Crash (Null Check)
+        if (originalIcon != null) {
+            ImageIcon scaledImage = new ImageIcon(originalIcon.getImage());
+            btnChat = new JLabel(scaledImage);
+        } else {
+            System.err.println("Peringatan: icon_chat.png tidak ditemukan, pakai teks pengganti.");
+            btnChat = new JLabel("Chat"); 
+            btnChat.setForeground(GUIUtils.COLOR_PRIMARY);
+        }
         
         // Agar kursor berubah jadi tangan
         btnChat.setCursor(new Cursor(Cursor.HAND_CURSOR)); 
