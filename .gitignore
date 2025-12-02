@@ -2,6 +2,7 @@
 config.properties
 /server/config.properties
 /server/src/main/resources/config.properties
+server/src/main/java/com/tubes/kantincepat/server/database/DatabaseConnetion.java
 
 # File IDE
 .idea/

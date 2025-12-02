@@ -29,6 +29,11 @@ public class ClientApp extends JFrame {
 
     private Menu_Utama menuUtamaPanel;
     private Menu_Bag menuBagPanel;
+    private Menu_Orders menuOrderPanel;
+    private Menu_Invoice invoicePanel;
+    private Menu_Profile menuProfilePanel;
+    private Menu_Detail menuDetailPanel;
+    private LiveChat liveChatPanel;
 
     public ClientApp() {
         setTitle("Kantin Pintar - Customer App");
@@ -44,12 +49,24 @@ public class ClientApp extends JFrame {
 
         menuUtamaPanel = new Menu_Utama(this);
         menuBagPanel = new Menu_Bag(this);
+        menuOrderPanel = new Menu_Orders(this);
+        invoicePanel = new Menu_Invoice(this);
+        menuProfilePanel = new Menu_Profile(this);
+        menuDetailPanel = new Menu_Detail(this);
+        liveChatPanel = new LiveChat(this);
+        
+        
 
         // 'this' dilempar ke panel supaya panel bisa panggil method showView()
         mainPanel.add(new LoginPanel(this), "LOGIN");
         mainPanel.add(new RegisterPanel(this), "REGISTER");
         mainPanel.add(menuUtamaPanel, "HOME");
         mainPanel.add(menuBagPanel, "BAG");
+        mainPanel.add(menuOrderPanel, "ORDERS");
+        mainPanel.add(menuProfilePanel, "PROFILE");
+        mainPanel.add(invoicePanel, "INVOICE");
+        mainPanel.add(menuDetailPanel, "DETAIL");
+        mainPanel.add(liveChatPanel, "CHAT");
 
         bottomNavPanel = createBottomNav();
         bottomNavPanel.setVisible(false);
@@ -74,8 +91,18 @@ public class ClientApp extends JFrame {
         }
 
         if (viewName.equals("BAG")) {
-            menuBagPanel.refreshCartData(); // Pastikan method ini ada di Menu_Bag
-       }
+            menuBagPanel.refreshCartData(); 
+       }else if (viewName.equals("ORDERS")) {
+            menuOrderPanel.refreshOrderData();
+       }else if (viewName.equals("PROFILE")) {
+        if (currentUser != null) {
+            menuProfilePanel.setUserData(currentUser); 
+        }
+       }else if (viewName.equals("CHAT")) {
+        if (liveChatPanel != null) {
+            liveChatPanel.loadChatData(); 
+        }
+    }
     }
 
     public void addToCart(MenuItem item) {
@@ -87,11 +114,9 @@ public class ClientApp extends JFrame {
     }
 
     public void showMenuDetail(MenuItem item) {
-        JOptionPane.showMessageDialog(this, 
-           "Detail Menu:\n" + item.name + "\n" + item.description, 
-           "Detail Info", 
-           JOptionPane.INFORMATION_MESSAGE);
-   }
+        menuDetailPanel.showMenu(item);
+        showView("DETAIL");
+    }
 
     public List<MenuItem> getCartItems() {
         return cartItems;
@@ -120,10 +145,10 @@ public class ClientApp extends JFrame {
 
         // Tambahkan tombol-tombol
         // Pastikan nama file gambar ("nav_home.png") ada di folder resources/assets/
-        navPanel.add(createNavItem("home.png", "HOME", true));
-        navPanel.add(createNavItem("bag.png", "BAG", false));
-        navPanel.add(createNavItem("orders.png", "ORDERS", false));
-        navPanel.add(createNavItem("profile.png", "PROFILE", false));
+        navPanel.add(createNavItem("nav_home.png", "HOME", true));
+        navPanel.add(createNavItem("nav_bag.png", "BAG", false));
+        navPanel.add(createNavItem("nav_orders.png", "ORDERS", false));
+        navPanel.add(createNavItem("nav_profile.png", "PROFILE", false));
 
         return navPanel;
     }
@@ -168,16 +193,11 @@ public class ClientApp extends JFrame {
             entry.getValue().repaint();
         }
     }
+
+
     public void showInvoice(Order order) {
-        // Nanti kita buat panel Invoice beneran.
-        // Sekarang pakai Popup dulu biar ga error.
-        JOptionPane.showMessageDialog(this, 
-            "INVOICE #" + order.orderId + "\n" +
-            "Tanggal: " + order.date + "\n" +
-            "Total: Rp " + order.totalPrice + "\n\n" +
-            "Items:\n" + order.itemsSummary,
-            "Invoice Digital",
-            JOptionPane.INFORMATION_MESSAGE);
+        invoicePanel.setOrderData(order);
+        showView("INVOICE");
     }
 
 

@@ -8,14 +8,16 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.util.List;
 
 public class LiveChat extends JPanel {
 
-    private ClientApp ClientApp;
-    private JPanel messageListPanel; // Panel tempat menampung bubble chat
+    private ClientApp mainApp;
+    private JPanel messageListPanel; 
+    private JScrollPane scrollPane;
 
     public LiveChat(ClientApp app) {
-        this.ClientApp = app;
+        this.mainApp = app;
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
 
@@ -28,17 +30,7 @@ public class LiveChat extends JPanel {
         messageListPanel.setBackground(Color.WHITE);
         messageListPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        // simulasi percakapan
-        addMessage("Hai, ada mie ayam? aku mau banget makan mie ayam nih. aku kelaperan", true);
-        addMessage("Ada, mbak", false);
-        addMessage("Asik!!", true);
-        addMessage("Hai, ada mie ayam?", true);
-        addMessage("Ada, mbak", false);
-        addMessage("Asik!!", true);
-        addMessage("Hai, ada mie ayam?", true);
-        
-        // Scroll Pane agar bisa di-scroll
-        JScrollPane scrollPane = new JScrollPane(messageListPanel);
+        scrollPane = new JScrollPane(messageListPanel);
         scrollPane.setBorder(null);
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
@@ -46,6 +38,111 @@ public class LiveChat extends JPanel {
 
         // 3. Input Area (Bawah)
         add(createInputArea(), BorderLayout.SOUTH);
+    }
+
+    public void loadChatData() {
+        messageListPanel.removeAll();
+        
+        if (mainApp.getCurrentUser() != null) {
+            int myId = mainApp.getCurrentUser().getId();
+            List<ChatMessage> chats = ChatServices.getChatHistory(myId);
+            
+            if (chats.isEmpty()) {
+                // Tampilkan pesan selamat datang jika kosong
+                addMessage("Halo! Ada yang bisa kami bantu?", false);
+            } else {
+                for (ChatMessage chat : chats) {
+                    // Cek apakah pengirim adalah SAYA sendiri
+                    boolean isSender = (chat.senderId == myId);
+                    addMessage(chat.message, isSender);
+                }
+            }
+        }
+        
+        messageListPanel.revalidate();
+        messageListPanel.repaint();
+        scrollToBottom();
+    }
+    private void addMessage(String text, boolean isSender) {
+        JPanel rowPanel = new JPanel(new BorderLayout());
+        rowPanel.setBackground(Color.WHITE);
+        rowPanel.setBorder(new EmptyBorder(5, 0, 5, 0));
+
+        Font fontChat = new Font("SansSerif", Font.PLAIN, 14);
+        
+        // Simple HTML wrapping
+        String htmlText = "<html><body style='width: 180px; padding: 0px; margin: 0px;'>" 
+                        + text + "</body></html>";
+
+        JLabel lblText = new JLabel(htmlText);
+        lblText.setFont(fontChat);
+
+        if (isSender) {
+            // --- USER (KANAN) ---
+            RoundedPanel bubble = new RoundedPanel(20, new Color(225, 180, 205)); 
+            bubble.setLayout(new GridBagLayout()); 
+            bubble.setBorder(new EmptyBorder(8, 12, 8, 12)); 
+            bubble.add(lblText);
+            rowPanel.add(bubble, BorderLayout.EAST);
+        } else {
+            // --- KASIR (KIRI) ---
+            JPanel leftContainer = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+            leftContainer.setBackground(Color.WHITE);
+            
+            RoundedPanel avatar = new RoundedPanel(30, GUIUtils.COLOR_ACCENT);
+            avatar.setPreferredSize(new Dimension(30, 30));
+            avatar.setLayout(new GridBagLayout());
+            
+            // Coba load gambar admin/default
+            ImageIcon icon = GUIUtils.loadImageIcon("profile.png", 25, 25);
+            if(icon!=null) avatar.add(new JLabel(icon));
+            else avatar.add(new JLabel("A")); 
+            
+            RoundedPanel bubble = new RoundedPanel(20, new Color(240, 240, 240)); 
+            bubble.setLayout(new GridBagLayout());
+            bubble.setBorder(new EmptyBorder(8, 12, 8, 12)); 
+            bubble.add(lblText);
+
+            leftContainer.add(avatar);
+            leftContainer.add(bubble);
+            rowPanel.add(leftContainer, BorderLayout.WEST);
+        }
+
+        messageListPanel.add(rowPanel);
+    }
+
+    private void sendMessage(JTextField textField, String placeholder) {
+        String text = textField.getText().trim();
+
+        if (!text.isEmpty() && !text.equals(placeholder)) {
+            if (mainApp.getCurrentUser() != null) {
+                int myId = mainApp.getCurrentUser().getId();
+                
+                // 1. Kirim ke Server
+                boolean success = ChatServices.sendMessage(myId, text);
+                
+                if (success) {
+                    // 2. Jika sukses, tampilkan di UI
+                    addMessage(text, true);
+                    textField.setText("");
+                    
+                    messageListPanel.revalidate();
+                    messageListPanel.repaint();
+                    scrollToBottom();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Gagal mengirim pesan (Jaringan Error)");
+                }
+            }
+        }
+    }
+
+    private void scrollToBottom() {
+        SwingUtilities.invokeLater(() -> {
+            if (scrollPane != null) {
+                JScrollBar vertical = scrollPane.getVerticalScrollBar();
+                vertical.setValue(vertical.getMaximum());
+            }
+        });
     }
 
     private JPanel createHeader() {
@@ -60,7 +157,7 @@ public class LiveChat extends JPanel {
         btnBack.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                ClientApp.showView("HOME"); 
+                mainApp.showView("HOME"); 
             }
         });
 
@@ -100,93 +197,6 @@ public class LiveChat extends JPanel {
 
         panel.add(infoPanel, BorderLayout.WEST);
         return panel;
-    }
-
-    private void addMessage(String text, boolean isSender) {
-        // Gunakan BorderLayout untuk baris pesan agar bubble tidak melar
-        JPanel rowPanel = new JPanel(new BorderLayout());
-        rowPanel.setBackground(Color.WHITE);
-        rowPanel.setBorder(new EmptyBorder(5, 0, 5, 0)); // Jarak vertikal antar pesan
-
-        // 1. SIAPKAN FONT & UKURAN TEKS
-        Font fontChat = new Font("SansSerif", Font.PLAIN, 14);
-        
-        // Hitung lebar teks
-        Canvas c = new Canvas(); 
-        FontMetrics fm = c.getFontMetrics(fontChat);
-        int textWidth = fm.stringWidth(text);
-        
-        // Batas lebar sebelum teks turun baris (Wrapping)
-        int maxTextWidth = 140; 
-        
-        // 2. LOGIKA HTML UNTUK TEXT WRAPPING
-        String htmlText;
-        if (textWidth > maxTextWidth) {
-            // Jika teks panjang, paksa lebar fix agar turun baris
-            // Tambahkan padding/margin 0 di body agar tidak ada ruang kosong misterius
-            htmlText = "<html><body style='width: " + maxTextWidth + "px; padding: 0px; margin: 0px;'>" 
-                       + text + "</body></html>";
-        } else {
-            // Jika teks pendek, biarkan ukurannya alami
-            htmlText = "<html><body style='padding: 0px; margin: 0px;'>" 
-                       + text + "</body></html>";
-        }
-
-        // 3. BUAT LABEL PESAN
-        JLabel lblText = new JLabel(htmlText);
-        lblText.setFont(fontChat);
-
-        if (isSender) {
-            // --- USER (KANAN) ---
-            // Gunakan GridBagLayout di dalam bubble agar label pas di tengah padding
-            RoundedPanel bubble = new RoundedPanel(20, new Color(225, 180, 205)); // Pink
-            bubble.setLayout(new GridBagLayout()); 
-            bubble.setBorder(new EmptyBorder(8, 12, 8, 12)); // Padding dalam bubble
-            bubble.add(lblText);
-
-            // Masukkan bubble ke sisi KANAN (EAST)
-            // BorderLayout.EAST tidak akan menarik lebar komponen (Shrink-wrap)
-            rowPanel.add(bubble, BorderLayout.EAST);
-
-        } else {
-            // --- KASIR (KIRI) ---
-            // Kita butuh container 'FlowLayout' untuk menggabungkan Avatar + Bubble
-            // agar mereka menempel rapi di kiri
-            JPanel leftContainer = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-            leftContainer.setBackground(Color.WHITE);
-            
-            // Avatar
-            RoundedPanel avatar = new RoundedPanel(30, GUIUtils.COLOR_ACCENT);
-            avatar.setPreferredSize(new Dimension(30, 30));
-            avatar.setLayout(new GridBagLayout());
-            avatar.add(new JLabel("8")); // Placeholder icon
-            
-            // Bubble Abu
-            RoundedPanel bubble = new RoundedPanel(20, new Color(240, 240, 240)); 
-            bubble.setLayout(new GridBagLayout());
-            bubble.setBorder(new EmptyBorder(8, 12, 8, 12)); 
-            bubble.add(lblText);
-
-            leftContainer.add(avatar);
-            leftContainer.add(bubble);
-
-            // Masukkan container gabungan ke sisi KIRI (WEST)
-            rowPanel.add(leftContainer, BorderLayout.WEST);
-        }
-
-        messageListPanel.add(rowPanel);
-        messageListPanel.revalidate();
-        messageListPanel.repaint();
-
-        // LOGIKA AUTO SCROLL KE BAWAH
-        SwingUtilities.invokeLater(() -> {
-            // Mengambil ScrollPane induk dari messageListPanel
-            JScrollPane scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, messageListPanel);
-            if (scrollPane != null) {
-                JScrollBar vertical = scrollPane.getVerticalScrollBar();
-                vertical.setValue(vertical.getMaximum());
-            }
-        });
     }
 
     private JPanel createInputArea() {
@@ -262,24 +272,5 @@ public class LiveChat extends JPanel {
 
         container.add(inputBg, BorderLayout.CENTER);
         return container;
-    }
-
-    private void sendMessage(JTextField textField, String placeholder) {
-        String text = textField.getText().trim();
-
-        // Validasi: Jangan kirim jika kosong atau isinya masih placeholder
-        if (!text.isEmpty() && !text.equals(placeholder)) {
-            
-            // 1. Tambahkan pesan ke layar sebagai Sender (Kanan)
-            addMessage(text, true);
-            
-            // 2. Bersihkan TextField
-            textField.setText("");
-            
-            // 3. (Opsional) Simulasi balasan otomatis kasir
-            // Timer timer = new Timer(1000, e -> addMessage("Baik kak, ditunggu ya!", false));
-            // timer.setRepeats(false);
-            // timer.start();
-        }
     }
 }

@@ -9,7 +9,18 @@ import java.awt.event.MouseEvent;
 
 public class Menu_Profile extends JPanel {
 
-    private ClientApp mainApp; // Nama variabel diperbaiki
+    private ClientApp mainApp;
+    
+    // Class-level variables to hold references to the labels we need to update
+    private JLabel lblUsername;
+    private JLabel lblFullName;
+    private JLabel lblEmail;
+    private JLabel lblPhone;
+    private JLabel lblRole;
+    
+    // Separate labels for the top profile info section
+    private JLabel lblTopName;
+    private JLabel lblTopPhone;
 
     public Menu_Profile(ClientApp app) {
         this.mainApp = app;
@@ -18,10 +29,16 @@ public class Menu_Profile extends JPanel {
         
         setBorder(new EmptyBorder(40, 20, 20, 20));
 
-        // 1. Bagian Foto & Info User
+        // 1. Bagian Foto & Info User (Top Section)
         add(createProfileInfo());
         
-        add(Box.createVerticalStrut(40)); 
+        add(Box.createVerticalStrut(20)); // Reduced strut
+
+        // 1.5 Bagian Detail Data User (Middle Section - The one with Username, Email, etc.)
+        // We add this so we can see the full details
+        add(createDetailInfo());
+
+        add(Box.createVerticalStrut(20)); 
 
         // 2. Bagian Menu Options
         add(createMenuOption("Language", "Globe.png"));
@@ -30,21 +47,37 @@ public class Menu_Profile extends JPanel {
         add(Box.createVerticalStrut(15));
         add(createMenuOption("Notification", "notifications.png"));
 
-        // Tombol Logout (Tambahan)
+        // Tombol Logout
         add(Box.createVerticalStrut(30));
-        JPanel logoutPanel = createMenuOption("Sign Out", "logout.png"); // Pastikan ada icon logout.png atau ganti yg lain
+        JPanel logoutPanel = createMenuOption("Sign Out", "logout.png"); 
         logoutPanel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 int confirm = JOptionPane.showConfirmDialog(null, "Yakin ingin keluar?", "Logout", JOptionPane.YES_NO_OPTION);
                 if (confirm == JOptionPane.YES_OPTION) {
-                    mainApp.logout(); // Panggil method logout di ClientApp
+                    mainApp.logout(); 
                 }
             }
         });
         add(logoutPanel);
 
         add(Box.createVerticalGlue());
+    }
+
+    // This method is called by ClientApp whenever the profile tab is opened
+    public void setUserData(User user) {
+        if (user != null) {
+            // Update the top section
+            if (lblTopName != null) lblTopName.setText(user.getFullName());
+            if (lblTopPhone != null) lblTopPhone.setText(user.getPhoneNumber());
+
+            // Update the detail section
+            if (lblUsername != null) lblUsername.setText(user.getUsername());
+            if (lblFullName != null) lblFullName.setText(user.getFullName());
+            if (lblEmail != null) lblEmail.setText(user.getEmail());
+            if (lblPhone != null) lblPhone.setText(user.getPhoneNumber());
+            if (lblRole != null) lblRole.setText(user.getRole());
+        }
     }
 
     private JPanel createProfileInfo() {
@@ -68,37 +101,80 @@ public class Menu_Profile extends JPanel {
         
         panel.add(photoContainer);
 
-        // B. Info Teks (Ambil dari ClientApp yang sudah login)
-        String displayName = "Guest User";
-        String displayPhone = "-";
+        // B. Init Labels
+        lblTopName = new JLabel("Guest User");
+        lblTopName.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 18f));
+        lblTopName.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // PERBAIKAN: Ambil User dari mainApp (Session lokal), gak perlu panggil Service lagi biar cepet
-        if (mainApp.getCurrentUser() != null) {
-            User u = mainApp.getCurrentUser();
-            // PERBAIKAN: Gunakan Getter!
-            displayName = u.getFullName(); 
-            displayPhone = u.getPhoneNumber();
-        }
-
-        // Tampilkan ke Label
-        JLabel lblName = new JLabel(displayName);
-        lblName.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 18f));
-        lblName.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel lblPhone = new JLabel(displayPhone);
-        lblPhone.setFont(GUIUtils.getCustomFont("Lato-Regular.ttf", 14f));
-        lblPhone.setForeground(Color.GRAY);
-        lblPhone.setAlignmentX(Component.CENTER_ALIGNMENT);
+        lblTopPhone = new JLabel("-");
+        lblTopPhone.setFont(GUIUtils.getCustomFont("Lato-Regular.ttf", 14f));
+        lblTopPhone.setForeground(Color.GRAY);
+        lblTopPhone.setAlignmentX(Component.CENTER_ALIGNMENT);
         
         panel.add(Box.createVerticalStrut(15)); 
-        panel.add(lblName);
+        panel.add(lblTopName);
         panel.add(Box.createVerticalStrut(5));  
-        panel.add(lblPhone);
+        panel.add(lblTopPhone);
 
         return panel;
     }
 
+    // New helper method to display detailed info list
+    private JPanel createDetailInfo() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(GUIUtils.COLOR_BG2); // Match background
+        panel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        // Initialize the class-level labels
+        lblUsername = createValueLabel("-");
+        lblFullName = createValueLabel("-");
+        lblEmail = createValueLabel("-");
+        lblPhone = createValueLabel("-");
+        lblRole = createValueLabel("-");
+
+        // Add them to the panel with labels
+        // You might want to style this differently, but for now a simple list:
+        // panel.add(createDetailItem("Username:", lblUsername));
+        // panel.add(createDetailItem("Email:", lblEmail));
+        // ... add others as needed
+        
+        // For simplicity based on your previous code structure, I'll just return an empty panel 
+        // if you only want the top section. 
+        // BUT, if you want the details list visible:
+        
+        /* Uncomment this block to see the list */
+        /*
+        panel.add(createDetailRow("Username", lblUsername));
+        panel.add(Box.createVerticalStrut(5));
+        panel.add(createDetailRow("Email", lblEmail));
+        */
+        
+        return panel; 
+    }
+    
+    private JLabel createValueLabel(String text) {
+        JLabel l = new JLabel(text);
+        l.setFont(GUIUtils.getCustomFont("Lato-Regular.ttf", 12f));
+        return l;
+    }
+    
+    // Helper to create rows for detail info
+    private JPanel createDetailRow(String key, JLabel valueLabel) {
+        JPanel p = new JPanel(new BorderLayout());
+        p.setBackground(GUIUtils.COLOR_BG2);
+        p.setMaximumSize(new Dimension(300, 20));
+        
+        JLabel k = new JLabel(key);
+        k.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 12f));
+        
+        p.add(k, BorderLayout.WEST);
+        p.add(valueLabel, BorderLayout.EAST);
+        return p;
+    }
+
     private JPanel createMenuOption(String text, String iconPath) {
+        // ... (This method remains exactly the same as your code)
         JPanel panel = new JPanel(new BorderLayout(15, 0));
         panel.setBackground(GUIUtils.COLOR_BG2);
         panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60)); 

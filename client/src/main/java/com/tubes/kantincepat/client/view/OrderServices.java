@@ -40,41 +40,73 @@ public class OrderServices {
         return -1;
     }
     public static List<Order> getOrdersByCustomer(int userId) {
-        // 1. Kirim request ke Server
         String payload = "GET_HISTORY:" + userId;
         String response = ClientSocket.getInstance().sendRequest(payload);
         
         List<Order> historyList = new ArrayList<>();
 
-        // 2. Parsing Balasan Server
-        // Format Harapan: HISTORY_DATA:ID|Date|Total|Status|ItemsSummary;ID|...
         if (response != null && response.startsWith("HISTORY_DATA:")) {
             
-            // Cek apakah datanya kosong (cuma header doang)
             if (response.length() <= 13) return historyList; 
 
-            String dataPart = response.substring(13); // Hapus "HISTORY_DATA:"
+            String dataPart = response.substring(13); 
             if (!dataPart.isEmpty()) {
+                // Pisahkan antar Order (pakai ;)
                 String[] ordersStr = dataPart.split(";");
+                
                 for (String ord : ordersStr) {
+                    if (ord.trim().isEmpty()) continue;
+
                     try {
+                        // Pisahkan field dalam satu order (pakai |)
                         String[] fields = ord.split("\\|");
-                        // fields[0]=ID, [1]=Date, [2]=Total, [3]=Status, [4]=Summary
                         
-                        if (fields.length >= 5) {
-                            Order o = new Order(
-                                fields[1], // Date
-                                fields[4], // Summary
-                                fields[2], // Total
-                                fields[3], // Status
-                                "-",       // Note (Optional)
-                                null       // List Item detail
-                            );
-                            o.orderId = fields[0];
+                        // KITA BUTUH 7 KOLOM (Termasuk Notes & Detail)
+                        if (fields.length >= 7) {
+                            String id = fields[0];
+                            String date = fields[1];
+                            String total = "Rp " + fields[2]; 
+                            String status = fields[3];
+                            String summary = fields[4];
+                            String notes = fields[5];       
+                            String rawItems = fields[6];    
+
+                            // --- LOGIKA PARSING DETAIL ITEM ---
+                            List<MenuItem> itemList = new ArrayList<>();
+                            
+                            if (!rawItems.equals("null") && !rawItems.isEmpty()) {
+                                // Split antar item menggunakan # (Sesuai update ClientHandler)
+                                String[] itemArray = rawItems.split("#");
+                                
+                                for (String itemStr : itemArray) {
+                                    // Split detail: ID,Nama,Harga,Qty
+                                    String[] det = itemStr.split(",");
+                                    
+                                    if (det.length >= 4) {
+                                        int menuId = Integer.parseInt(det[0]);
+                                        String name = det[1];
+                                        int price = Integer.parseInt(det[2]);
+                                        int qty = Integer.parseInt(det[3]);
+
+                                        // Buat objek MenuItem sementara
+                                        MenuItem mi = new MenuItem(menuId, name, "-", price, "Food", null, true);
+                                        
+                                        // Masukkan ke list sebanyak qty agar hitungan di Invoice benar
+                                        for(int k=0; k<qty; k++) {
+                                            itemList.add(mi);
+                                        }
+                                    }
+                                }
+                            }
+                            // ----------------------------------
+
+                            // Masukkan ke Constructor Order yang BARU (dengan ID, Notes, dan List Item)
+                            Order o = new Order(id, date, summary, total, status, notes, itemList);
                             historyList.add(o);
                         }
                     } catch (Exception e) {
-                        System.err.println("Gagal parse order history: " + ord);
+                        e.printStackTrace();
+                        System.err.println("Gagal parse order: " + ord);
                     }
                 }
             }

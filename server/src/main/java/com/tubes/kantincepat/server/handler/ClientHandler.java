@@ -4,6 +4,7 @@ import com.tubes.kantincepat.server.database.DatabaseConnetion;
 import java.io.*;
 import java.net.Socket;
 import java.sql.*;
+import java.text.SimpleDateFormat;
 
 public class ClientHandler implements Runnable{
     private Socket socket;
@@ -40,8 +41,17 @@ public class ClientHandler implements Runnable{
                     case "CREATE_ORDER":
                         handleCreateOrder(parts); 
                         break;
+                    case "GET_HISTORY":
+                        handleGetHistory(parts);
+                        break;
                     case "GET_USER":
                         handleGetUser(parts);
+                        break;
+                    case "SEND_CHAT":
+                        handleSendChat(parts);
+                        break;
+                    case "GET_CHAT":
+                        handleGetChat(parts);
                         break;
                     default:
                         out.println("ERROR:Unknown Command");
@@ -183,30 +193,22 @@ public class ClientHandler implements Runnable{
             out.println("ORDER_FAILED:Data Incomplete");
             return;
         }
-
-        int userId = Integer.parseInt(parts[1]);
-        long totalAmount = Long.parseLong(parts[2]);
-        String notes = parts[3];
-        String itemsData = parts[4];
-
-        String sqlHeader = "INSERT INTO orders (user_id, total_amount, status, notes, order_date) VALUES (?, ?, 'PENDING', ?, NOW())";
-        String sqlDetail = "INSERT INTO order_details (order_id, menu_id, quantity, subtotal) VALUES (?, ?, ?, ?)";
-        String sqlPrice  = "SELECT price FROM menu_items WHERE menu_id = ?";
-
-        Connection conn = null;
         try {
-            conn = DatabaseConnetion.getConnection();
-            conn.setAutoCommit(false); 
+            int userId = Integer.parseInt(parts[1]);
+            long totalAmount = Long.parseLong(parts[2]);
+            String notes = parts[3];
+            String itemsData = parts[4];
 
-            // 1. INSERT HEADER (Tabel orders)
+            Connection conn = DatabaseConnetion.getConnection();
+            conn.setAutoCommit(false);
+
+            // 1. INSERT HEADER
+            String sqlHeader = "INSERT INTO orders (user_id, total_amount, status, order_date) VALUES (?, ?, 'PENDING', NOW())";
             PreparedStatement psHeader = conn.prepareStatement(sqlHeader, Statement.RETURN_GENERATED_KEYS);
             psHeader.setInt(1, userId);
-            psHeader.setInt(2, (int) totalAmount);
-            psHeader.setString(3, notes);
-            
+            psHeader.setBigDecimal(2, java.math.BigDecimal.valueOf(totalAmount));
             psHeader.executeUpdate();
 
-            // Ambil ID Order yang baru dibuat
             ResultSet rsKeys = psHeader.getGeneratedKeys();
             int newOrderId = -1;
             if (rsKeys.next()) {
@@ -215,46 +217,97 @@ public class ClientHandler implements Runnable{
                 throw new SQLException("Gagal ID");
             }
 
-            // 2. INSERT DETAILS (Looping items)
-            String[] itemPairs = itemsData.split(";");
+
+      // 2. INSERT DETAILS
+            String sqlDetail = "INSERT INTO order_details (order_id, menu_id, quantity, subtotal, notes) VALUES (?, ?, ?, ?, ?)";
+            String sqlPrice  = "SELECT price FROM menu_items WHERE menu_id = ?";
+            
             PreparedStatement psDetail = conn.prepareStatement(sqlDetail);
             PreparedStatement psPrice = conn.prepareStatement(sqlPrice);
 
+            String[] itemPairs = itemsData.split(";");
             for (String pair : itemPairs) {
-                String[] val = pair.split(","); // val[0]=MenuID, val[1]=Qty
+                String[] val = pair.split(","); 
                 int menuId = Integer.parseInt(val[0]);
                 int qty = Integer.parseInt(val[1]);
 
-                // Ambil harga asli dari DB (Biar aman, jangan percaya harga kiriman client)
                 psPrice.setInt(1, menuId);
                 ResultSet rsPrice = psPrice.executeQuery();
                 int price = 0;
                 if (rsPrice.next()) price = rsPrice.getInt("price");
                 rsPrice.close();
 
-                // Simpan Detail
                 psDetail.setInt(1, newOrderId);
                 psDetail.setInt(2, menuId);
                 psDetail.setInt(3, qty);
-                psDetail.setInt(4, price * qty); // Subtotal
+                psDetail.setBigDecimal(4, java.math.BigDecimal.valueOf((long)price * qty));
+                psDetail.setString(5, notes); 
+                
                 psDetail.addBatch();
             }
 
             psDetail.executeBatch();
-            
-            // 3. SELESAI
-            conn.commit(); // Simpan permanen
+            conn.commit();
             System.out.println("✅ Order Created ID: " + newOrderId);
             out.println("ORDER_SUCCESS:" + newOrderId);
 
         } catch (Exception e) {
             e.printStackTrace();
-            try { if (conn != null) conn.rollback(); } catch (SQLException ex) {} // Batalkan jika error
             out.println("ORDER_FAILED:Database Error");
-        } finally {
-             try { if (conn != null) conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) {}
         }
     }
+
+    private void handleGetHistory(String[] parts) {
+        if (parts.length < 2) return;
+        int userId = Integer.parseInt(parts[1]);
+
+        String sql = "SELECT o.order_id, o.order_date, o.total_amount, o.status, " +
+                     "MAX(od.notes) as notes, " +  
+                     "string_agg(m.name || ' (x' || od.quantity || ')', ', ') as summary, " +
+                     "string_agg(m.menu_id || ',' || m.name || ',' || m.price || ',' || od.quantity, '#') as items_detail " + 
+                     "FROM orders o " +
+                     "JOIN order_details od ON o.order_id = od.order_id " +
+                     "JOIN menu_items m ON od.menu_id = m.menu_id " +
+                     "WHERE o.user_id = ? " +
+                     "GROUP BY o.order_id " +
+                     "ORDER BY o.order_date DESC";
+
+        try (Connection conn = DatabaseConnetion.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, userId);
+            ResultSet rs = stmt.executeQuery();
+            StringBuilder sb = new StringBuilder();
+            SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy, HH:mm");
+
+            while (rs.next()) {
+                int id = rs.getInt("order_id");
+                String date = sdf.format(rs.getTimestamp("order_date"));
+                int total = rs.getBigDecimal("total_amount").intValue();
+                String status = rs.getString("status");
+                String summary = rs.getString("summary");
+
+                String notes = rs.getString("notes");
+                if (notes == null) notes = "-";
+
+                String itemsDetail = rs.getString("items_detail");
+
+                sb.append(id).append("|")
+                  .append(date).append("|")
+                  .append(total).append("|")
+                  .append(status).append("|")
+                  .append(summary).append("|")     
+                  .append(notes).append("|")       
+                  .append(itemsDetail).append(";");
+            }
+            out.println("HISTORY_DATA:" + sb.toString());
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            out.println("ERROR:History DB Error");
+        }
+    }
+
     private void handleGetUser(String[] parts) {
         // Format: GET_USER:UserID
         if (parts.length < 2) return;
@@ -269,8 +322,13 @@ public class ClientHandler implements Runnable{
             ResultSet rs = stmt.executeQuery();
             
             if (rs.next()) {
-                // Kirim balik data lengkap
                 // Format: USER_DATA:ID:Username:Email:Fullname:Phone:Role
+                String fullname = rs.getString("full_name");
+                if (fullname == null) fullname = "-";
+                
+                String phone = rs.getString("phone_number");
+                if (phone == null) phone = "-";
+
                 String resp = "USER_DATA:" + 
                               rs.getInt("user_id") + ":" +
                               rs.getString("username") + ":" +
@@ -282,6 +340,65 @@ public class ClientHandler implements Runnable{
             } else {
                 out.println("ERROR:User Not Found");
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            out.println("ERROR:DB Error");
+        }
+    }
+
+    private void handleSendChat(String[] parts) {
+        // Format: SEND_CHAT:SenderID:Message
+        // Receiver ID kita set NULL (artinya dikirim ke Admin/Store)
+        if (parts.length < 3) return;
+
+        int senderId = Integer.parseInt(parts[1]);
+        String messageContent = parts[2];
+
+        String sql = "INSERT INTO chat_messages (sender_id, receiver_id, message, sent_at) VALUES (?, NULL, ?, NOW())";
+
+        try (Connection conn = DatabaseConnetion.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, senderId);
+            stmt.setString(2, messageContent);
+            
+            int rows = stmt.executeUpdate();
+            if (rows > 0) out.println("CHAT_SUCCESS");
+            else out.println("CHAT_FAILED");
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            out.println("ERROR:DB Error");
+        }
+    }
+
+    private void handleGetChat(String[] parts) {
+        // Format: GET_CHAT:UserID
+        if (parts.length < 2) return;
+        int userId = Integer.parseInt(parts[1]);
+
+        // Ambil pesan dimana User adalah PENGIRIM atau User adalah PENERIMA
+        String sql = "SELECT * FROM chat_messages WHERE sender_id = ? OR receiver_id = ? ORDER BY sent_at ASC";
+
+        try (Connection conn = DatabaseConnetion.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, userId);
+            stmt.setInt(2, userId);
+            ResultSet rs = stmt.executeQuery();
+            
+            StringBuilder sb = new StringBuilder();
+            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
+
+            while (rs.next()) {
+                // Format Respon: ID|SenderID|Message|Time;
+                sb.append(rs.getInt("chat_id")).append("|")
+                  .append(rs.getInt("sender_id")).append("|")
+                  .append(rs.getString("message")).append("|")
+                  .append(sdf.format(rs.getTimestamp("sent_at"))).append(";");
+            }
+            out.println("CHAT_HISTORY:" + sb.toString());
+
         } catch (SQLException e) {
             e.printStackTrace();
             out.println("ERROR:DB Error");

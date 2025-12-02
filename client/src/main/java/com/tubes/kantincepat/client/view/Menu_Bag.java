@@ -101,12 +101,11 @@ public class Menu_Bag extends JPanel {
         RoundedPanel imgContainer = new RoundedPanel(20, GUIUtils.COLOR_ACCENT);
         imgContainer.setPreferredSize(new Dimension(80, 80));
         imgContainer.setLayout(new GridBagLayout());
-        
-        // Load Gambar Aman (Anti Crash)
-        ImageIcon icon = GUIUtils.loadImageIcon(item.imagePath, 60, 60);
-        if (icon != null) {
-            imgContainer.add(new JLabel(icon));
-        } else {
+        try{
+            ImageIcon icon = new ImageIcon(item.imagePath);
+            Image img = icon.getImage().getScaledInstance(60, 60, Image.SCALE_SMOOTH);
+            imgContainer.add(new JLabel(new ImageIcon(img)));
+        } catch (Exception e){
             imgContainer.add(new JLabel("IMG"));
         }
 
@@ -228,6 +227,7 @@ public class Menu_Bag extends JPanel {
                 }
 
                 long totalPriceInt = 0;
+                
                 for (MenuItem item : mainApp.getCartItems()) totalPriceInt += item.price;
                 
                 String notesContent = (notesArea != null) ? notesArea.getText() : "-";
@@ -280,9 +280,10 @@ public class Menu_Bag extends JPanel {
         panel.setBorder(new EmptyBorder(15, 20, 15, 20));
 
         JLabel btnBack = new JLabel("←");
-        btnBack.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 24f));
+        btnBack.setFont(new Font("SansSerif", Font.BOLD, 24));
         btnBack.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnBack.addMouseListener(new MouseAdapter() {
+            @Override
             public void mouseClicked(MouseEvent e) { mainApp.showView("HOME"); }
         });
 

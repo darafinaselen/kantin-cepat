@@ -76,7 +76,7 @@ public class Menu_Detail extends JPanel {
         panel.setBorder(new EmptyBorder(15, 20, 15, 20));
 
         JLabel btnBack = new JLabel("←");
-        btnBack.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 24f));
+        btnBack.setFont(new Font("SansSerif", Font.BOLD, 24));
         btnBack.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnBack.addMouseListener(new MouseAdapter() {
             @Override

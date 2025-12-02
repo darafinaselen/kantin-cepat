@@ -90,7 +90,7 @@ public class Menu_Utama extends JPanel {
         // Format Response Server:
         // "MENU_DATA:ID|Nama|Harga|Kategori|Gambar|Desc;ID|Nama|..."
         if (response != null && response.startsWith("MENU_DATA:")) {
-            String dataPart = response.substring(10); // Hapus header
+            String dataPart = response.substring(10); 
             if (!dataPart.isEmpty()) {
                 String[] items = dataPart.split(";");
                 for (String itemStr : items) {
@@ -304,10 +304,10 @@ public class Menu_Utama extends JPanel {
         panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
 
         // Tambahkan tombol dengan ID Kategori
-        panel.add(createCategoryItem("All", "all.png", "All"));
-        panel.add(createCategoryItem("Meals", "meals.png", "Meals"));
-        panel.add(createCategoryItem("Drink", "drink.png", "Drink"));
-        panel.add(createCategoryItem("Snack", "snack.png", "Snack"));
+        panel.add(createCategoryItem("All", "client\\src\\main\\resources\\assets\\all.png", "All"));
+        panel.add(createCategoryItem("Meals", "client\\src\\main\\resources\\assets\\meals.png", "Meals"));
+        panel.add(createCategoryItem("Drink", "client\\src\\main\\resources\\assets\\drink.png", "Drink"));
+        panel.add(createCategoryItem("Snack", "client\\src\\main\\resources\\assets\\snack.png", "Snack"));
         return panel;
     }
 

@@ -13,9 +13,8 @@ public class Order {
     public String notes;
     public List<MenuItem> savedItems;
 
-    public Order(String date, String itemsSummary, String totalPrice, String status, String notes, List<MenuItem> items) {
-        // this.orderId = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        this.orderId = "WAIT";
+    public Order(String id, String date, String itemsSummary, String totalPrice, String status, String notes, List<MenuItem> items) {
+        this.orderId = id; 
         this.date = date;
         this.itemsSummary = itemsSummary;
         this.totalPrice = totalPrice;
