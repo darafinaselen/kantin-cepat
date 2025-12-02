@@ -13,7 +13,7 @@ public class LoginPanel extends JPanel {
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setBackground(GUIUtils.COLOR_BG);
 
-        ImageIcon headerIcon = GUIUtils.loadImageIcon("kantin-pintar.png", 375, 128);
+        ImageIcon headerIcon = GUIUtils.loadImageIcon("header.png", 375, 128);
         if (headerIcon != null) {
             JLabel headerLabel = new JLabel(headerIcon);
             headerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);

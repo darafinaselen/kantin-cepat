@@ -77,6 +77,7 @@ IDE Anda (IntelliJ/VS Code) akan otomatis mendeteksi ini sebagai proyek Maven. I
 Anda siap untuk ngoding!
 
 📖 Pembagian Tugas
+
 **Developer A (Backend Core & DB)**
 
 - Bertanggung jawab atas modul server.
@@ -90,7 +91,7 @@ Anda siap untuk ngoding!
 - File Utama: client/src/main/java/.../view/AdminDashboardView.java
 - File Pendukung: common/ (untuk Menu.java)
 
-**Developer C (Customer & Order)**
+**Developer C (Customer & Order) Bagian Yuda**
 
 - Bertanggung jawab atas GUI Pelanggan (Lihat menu, keranjang, checkout, tracking pesanan).
 - File Utama: client/src/main/java/.../view/CustomerDashboardView.java
