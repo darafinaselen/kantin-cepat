@@ -1,6 +1,6 @@
 package com.tubes.kantincepat.client.view;
 
-import com.tubes.kantincepat.client.ClientApp;
+import com.tubes.kantincepat.client.KitchenApp;
 import com.tubes.kantincepat.client.net.ClientSocket;
 
 import javax.swing.*;
@@ -9,10 +9,10 @@ import java.awt.*;
 
 public class KitchenPanel extends JPanel {
 
-    private final ClientApp mainApp;
+    private final KitchenApp mainApp;
     private JPanel ordersContainer;
 
-    public KitchenPanel(ClientApp mainApp) {
+    public KitchenPanel(KitchenApp mainApp) {
         this.mainApp = mainApp;
 
         setLayout(new BorderLayout());

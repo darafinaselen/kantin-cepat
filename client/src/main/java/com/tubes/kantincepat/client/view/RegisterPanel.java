@@ -1,6 +1,6 @@
 package com.tubes.kantincepat.client.view;
 
-import com.tubes.kantincepat.client.ClientApp;
+import com.tubes.kantincepat.client.KitchenApp;
 import com.tubes.kantincepat.client.net.ClientSocket;
 import javax.swing.*;
 import java.awt.*;
@@ -9,7 +9,7 @@ import java.awt.event.MouseEvent;
 
 public class RegisterPanel extends JPanel {
 
-    public RegisterPanel(ClientApp mainApp) {
+    public RegisterPanel(KitchenApp mainApp) {
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setBackground(GUIUtils.COLOR_BG);
 

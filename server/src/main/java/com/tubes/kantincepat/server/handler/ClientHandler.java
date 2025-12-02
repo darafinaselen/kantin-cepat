@@ -14,7 +14,6 @@ import java.sql.SQLException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-
 public class ClientHandler implements Runnable {
 
     private Socket socket;
@@ -42,10 +41,9 @@ public class ClientHandler implements Runnable {
                 if (message.isEmpty()) continue;
 
                 System.out.println("📩 Request: " + message);
+                System.out.println("[SERVER] RAW: " + message);
 
-                System.out.println("[SERVER] RAW: " + message); // <--- TAMBAHKAN INI
-
-                String[] parts   = message.split(":", 4); // Ubah jadi 4 biar bisa baca message yang ada ":"
+                String[] parts   = message.split(":", 4);
                 String command   = parts[0];
 
                 switch (command) {
@@ -72,6 +70,12 @@ public class ClientHandler implements Runnable {
                         break;
                     case "CHAT_LOGIN":
                         handleChatLogin(parts);
+                        break;
+                    case "MARK_READ":
+                        handleMarkRead(parts);
+                        break;
+                    case "MARK_ALL_READ":
+                        handleMarkAllRead();
                         break;
                     default:
                         out.println("ERROR:Unknown Command");
@@ -111,15 +115,12 @@ public class ClientHandler implements Runnable {
                 String fullname = rs.getString("full_name");
                 int userId      = rs.getInt("user_id");
 
-                this.userId = userId; // simpan biar handler tahu ini user siapa (buat chat)
+                this.userId = userId;
 
-                // FORMAT BARU:
-                // LOGIN_SUCCESS:ROLE:FULLNAME:USERID
                 out.println("LOGIN_SUCCESS:" + role + ":" + fullname + ":" + userId);
             } else {
                 out.println("LOGIN_FAILED:Wrong credentials");
             }
-
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -137,11 +138,11 @@ public class ClientHandler implements Runnable {
             String sql = "INSERT INTO users (username, email, password, full_name, phone_number, role) " +
                          "VALUES (?, ?, ?, ?, ?, 'CUSTOMER')";
             PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setString(1, parts[1]); // username
-            stmt.setString(2, parts[2]); // email
-            stmt.setString(3, parts[3]); // password
-            stmt.setString(4, parts[4]); // full_name
-            stmt.setString(5, parts[5]); // phone_number
+            stmt.setString(1, parts[1]);
+            stmt.setString(2, parts[2]);
+            stmt.setString(3, parts[3]);
+            stmt.setString(4, parts[4]);
+            stmt.setString(5, parts[5]);
 
             int rows = stmt.executeUpdate();
             if (rows > 0) out.println("REGISTER_SUCCESS");
@@ -290,15 +291,11 @@ public class ClientHandler implements Runnable {
     // ================== LIVE CHAT ==================
 
     private void handleSendChat(String[] parts) {
-        // Format baru: SEND_CHAT:message
-
-        // Debug biar kelihatan di console server
         System.out.println("[DEBUG] SEND_CHAT parts.length = " + parts.length);
         for (int i = 0; i < parts.length; i++) {
             System.out.println("[DEBUG] parts[" + i + "] = " + parts[i]);
         }
 
-        // Pastikan user sudah punya userId
         if (this.userId <= 0) {
             out.println("CHAT_FAILED:NOT_LOGGED_IN");
             return;
@@ -309,11 +306,10 @@ public class ClientHandler implements Runnable {
             return;
         }
 
-        // message di index 1
         String message = parts[1];
 
         try (Connection conn = DatabaseConnetion.getConnection()) {
-            String sql = "INSERT INTO chat_messages (sender_id, message) VALUES (?, ?)";
+            String sql = "INSERT INTO chat_messages (sender_id, message, is_read) VALUES (?, ?, FALSE)";
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setInt(1, this.userId);
             stmt.setString(2, message);
@@ -322,8 +318,8 @@ public class ClientHandler implements Runnable {
             if (rows > 0) {
                 out.println("CHAT_SENT");
 
-                // kirim ke semua client yang sedang connect
-                broadcastChatSimple(this.userId, message);
+                // broadcast dengan status is_read = false
+                broadcastChatSimple(this.userId, message, false);
             } else {
                 out.println("CHAT_FAILED");
             }
@@ -335,10 +331,9 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private static void broadcastChatSimple(int senderId, String message) {
-        // jaga protokol, jangan ada ":" diisi liar
+    private static void broadcastChatSimple(int senderId, String message, boolean isRead) {
         String sanitized = message.replace(":", " ");
-        String payload = "CHAT_MESSAGE:" + senderId + ":" + sanitized;
+        String payload = "CHAT_MESSAGE:" + senderId + ":" + sanitized + ":" + isRead;
 
         for (ClientHandler ch : clients) {
             if (ch.out != null) {
@@ -347,7 +342,78 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    // GET_CHAT_MESSAGES:userId:adminId
+    private void handleMarkRead(String[] parts) {
+        if (parts.length < 2) {
+            return;
+        }
+
+        try (Connection conn = DatabaseConnetion.getConnection()) {
+            int senderId = Integer.parseInt(parts[1]);
+
+            System.out.println("[SERVER] MARK_READ for senderId: " + senderId + " by userId: " + this.userId);
+
+            // Update semua pesan dari sender yang belum dibaca
+            String sql = "UPDATE chat_messages SET is_read = TRUE WHERE sender_id = ? AND is_read = FALSE";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, senderId);
+
+            int updated = stmt.executeUpdate();
+            System.out.println("[SERVER] Updated " + updated + " messages to read");
+            
+            if (updated > 0) {
+                // Broadcast update ke semua client
+                broadcastReadStatus(senderId);
+            }
+
+        } catch (SQLException | NumberFormatException e) {
+            System.out.println("SQL ERROR di MARK_READ: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    private void handleMarkAllRead() {
+        try (Connection conn = DatabaseConnetion.getConnection()) {
+            System.out.println("[SERVER] MARK_ALL_READ by userId: " + this.userId);
+
+            // Update semua pesan yang diterima oleh user ini (bukan yang dikirim)
+            String sql = "UPDATE chat_messages SET is_read = TRUE WHERE sender_id != ? AND is_read = FALSE";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, this.userId);
+
+            int updated = stmt.executeUpdate();
+            System.out.println("[SERVER] Updated " + updated + " messages to read");
+            
+            if (updated > 0) {
+                // Broadcast ke semua client bahwa pesan mereka sudah dibaca
+                // Kita perlu tahu siapa saja yang pernah kirim pesan
+                String sqlSenders = "SELECT DISTINCT sender_id FROM chat_messages WHERE sender_id != ?";
+                PreparedStatement stmtSenders = conn.prepareStatement(sqlSenders);
+                stmtSenders.setInt(1, this.userId);
+                ResultSet rs = stmtSenders.executeQuery();
+                
+                while (rs.next()) {
+                    int senderId = rs.getInt("sender_id");
+                    broadcastReadStatus(senderId);
+                }
+            }
+
+        } catch (SQLException e) {
+            System.out.println("SQL ERROR di MARK_ALL_READ: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private static void broadcastReadStatus(int senderId) {
+        String payload = "READ_STATUS:" + senderId;
+        System.out.println("[SERVER] Broadcasting: " + payload);
+
+        for (ClientHandler ch : clients) {
+            if (ch.out != null) {
+                ch.out.println(payload);
+            }
+        }
+    }
+
     private void handleGetChatMessages(String[] parts) {
         if (parts.length < 3) {
             out.println("NO_MESSAGES");
@@ -358,9 +424,8 @@ public class ClientHandler implements Runnable {
             int userId = Integer.parseInt(parts[1]);
             int adminId = Integer.parseInt(parts[2]);
 
-            // Ambil percakapan antara user dan admin (dua arah)
             String sql = """
-                    SELECT sender_id, message, sent_at
+                    SELECT sender_id, message, sent_at, is_read
                     FROM chat_messages
                     WHERE (sender_id = ? AND receiver_id = ?)
                        OR (sender_id = ? AND receiver_id = ?)
@@ -383,13 +448,15 @@ public class ClientHandler implements Runnable {
                 int senderId = rs.getInt("sender_id");
                 String message = rs.getString("message");
                 String timestamp = rs.getString("sent_at");
+                boolean isRead = rs.getBoolean("is_read");
 
                 if (sb.length() == 0) sb.append("MESSAGES:");
                 else sb.append(";");
 
                 sb.append(senderId)
                   .append("|").append(sanitize(message))
-                  .append("|").append(timestamp);
+                  .append("|").append(timestamp)
+                  .append("|").append(isRead);
             }
 
             if (!hasAny) out.println("NO_MESSAGES");
@@ -414,7 +481,6 @@ public class ClientHandler implements Runnable {
             out.println("CHAT_LOGIN_FAILED");
         }
     }
-
 
     private String sanitize(String s) {
         if (s == null) return "";

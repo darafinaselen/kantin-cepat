@@ -1,6 +1,6 @@
 package com.tubes.kantincepat.client.view;
 
-import com.tubes.kantincepat.client.ClientApp;
+import com.tubes.kantincepat.client.KitchenApp;
 import com.tubes.kantincepat.client.net.ClientSocket;
 
 import javax.swing.*;
@@ -11,10 +11,10 @@ import java.awt.event.MouseEvent;
 
 public class KitchenHistoryPanel extends JPanel {
 
-    private final ClientApp mainApp;
+    private final KitchenApp mainApp;
     private JPanel ordersContainer;
 
-    public KitchenHistoryPanel(ClientApp mainApp) {
+    public KitchenHistoryPanel(KitchenApp mainApp) {
         this.mainApp = mainApp;
 
         System.out.println("[HistoryPanel] constructor instance = " +

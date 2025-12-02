@@ -12,9 +12,8 @@ public class ChatClient {
     private BufferedReader in;
     private PrintWriter out;
 
-    // listener supaya UI bisa diberi callback
     public interface ChatListener {
-        void onChatMessage(int senderId, String message);
+        void onChatMessage(int senderId, String message, boolean isRead);
     }
 
     private ChatListener listener;
@@ -26,10 +25,8 @@ public class ChatClient {
         this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         this.out = new PrintWriter(socket.getOutputStream(), true);
 
-        // identitas ke server (sederhana, tidak pakai password lagi)
         out.println("CHAT_LOGIN:" + currentUserId);
 
-        // mulai thread listener
         startListenerThread();
     }
 
@@ -45,17 +42,32 @@ public class ChatClient {
                     line = line.trim();
                     if (line.isEmpty()) continue;
 
+                    System.out.println("[CHAT-CLIENT] Received: " + line);
+
                     if (line.startsWith("CHAT_MESSAGE:")) {
-                        // format: CHAT_MESSAGE:senderId:message
-                        String[] parts = line.split(":", 3);
+                        // format: CHAT_MESSAGE:senderId:message:isRead
+                        String[] parts = line.split(":", 4);
                         int senderId = Integer.parseInt(parts[1]);
                         String message = parts[2];
+                        boolean isRead = parts.length > 3 && "true".equalsIgnoreCase(parts[3]);
 
                         if (listener != null) {
-                            listener.onChatMessage(senderId, message);
+                            listener.onChatMessage(senderId, message, isRead);
+                        }
+                    } else if (line.startsWith("READ_STATUS:")) {
+                        // format: READ_STATUS:senderId
+                        String[] parts = line.split(":");
+                        int senderId = Integer.parseInt(parts[1]);
+                        
+                        System.out.println("[CHAT-CLIENT] READ_STATUS received for senderId: " + senderId + ", my ID: " + currentUserId);
+                        
+                        // Jika pesan yang dibaca adalah pesan kita, update UI
+                        if (senderId == currentUserId && listener != null) {
+                            System.out.println("[CHAT-CLIENT] Triggering tick update to blue");
+                            // Trigger update UI untuk ubah centang jadi biru
+                            listener.onChatMessage(senderId, "", true);
                         }
                     } else {
-                        // kalau ada respons lain, untuk sekarang log saja
                         System.out.println("[CHAT] Server: " + line);
                     }
                 }
@@ -74,6 +86,13 @@ public class ChatClient {
         }
     }
 
+    // Panggil manual dari UI ketika user membuka chat
+    public void markAllAsRead() {
+        if (out != null) {
+            System.out.println("[Client-Chat] MARK_ALL_READ");
+            out.println("MARK_ALL_READ");
+        }
+    }
 
     public void close() {
         try {
