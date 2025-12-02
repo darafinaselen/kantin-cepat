@@ -401,7 +401,7 @@ public class Menu_Utama extends JPanel {
                 clientApp.addToCart(item);
 
                 // 2. Beri efek visual/notifikasi sederhana
-                JOptionPane.showMessageDialog(null, item.name + " berhasil masuk keranjang!");
+                // JOptionPane.showMessageDialog(null, item.name + " berhasil masuk keranjang!");
             }
         });
         

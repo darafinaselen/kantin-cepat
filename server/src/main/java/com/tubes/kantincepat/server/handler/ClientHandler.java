@@ -264,7 +264,7 @@ public class ClientHandler implements Runnable{
         String sql = "SELECT o.order_id, o.order_date, o.total_amount, o.status, " +
                      "MAX(od.notes) as notes, " +  
                      "string_agg(m.name || ' (x' || od.quantity || ')', ', ') as summary, " +
-                     "string_agg(m.menu_id || ',' || m.name || ',' || m.price || ',' || od.quantity, '#') as items_detail " + 
+                     "string_agg(m.menu_id || ',' || m.name || ',' || m.price || ',' || od.quantity || ',' || COALESCE(m.image_path, 'null') || ',' || m.category, '#') as items_detail " +
                      "FROM orders o " +
                      "JOIN order_details od ON o.order_id = od.order_id " +
                      "JOIN menu_items m ON od.menu_id = m.menu_id " +

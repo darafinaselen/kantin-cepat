@@ -67,6 +67,7 @@ public class ClientApp extends JFrame {
         mainPanel.add(invoicePanel, "INVOICE");
         mainPanel.add(menuDetailPanel, "DETAIL");
         mainPanel.add(liveChatPanel, "CHAT");
+        mainPanel.add(new Checkout(this), "SUCCESS");
 
         bottomNavPanel = createBottomNav();
         bottomNavPanel.setVisible(false);

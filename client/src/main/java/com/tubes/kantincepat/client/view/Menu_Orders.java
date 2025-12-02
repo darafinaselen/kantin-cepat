@@ -194,16 +194,31 @@ public class Menu_Orders extends JPanel {
         lbl.setBorder(new EmptyBorder(5, 10, 5, 10)); // Padding dalam badge
 
         // Logika Warna berdasarkan Status
-        if (status.equalsIgnoreCase("Selesai")) {
-            lbl.setBackground(new Color(220, 255, 220)); // Hijau Muda
-            lbl.setForeground(new Color(0, 100, 0));     // Hijau Tua
-        } else if (status.equalsIgnoreCase("Dibatalkan")) {
-            lbl.setBackground(new Color(255, 220, 220)); // Merah Muda
-            lbl.setForeground(Color.RED);                // Merah
+        if (status.equalsIgnoreCase("COMPLETED") || status.equalsIgnoreCase("SELESAI")) {
+            // HIJAU (Sukses)
+            lbl.setBackground(new Color(220, 255, 220)); 
+            lbl.setForeground(new Color(0, 100, 0));     
+            
+        } else if (status.equalsIgnoreCase("CANCELLED") || status.equalsIgnoreCase("DIBATALKAN")) {
+            // MERAH (Gagal)
+            lbl.setBackground(new Color(255, 220, 220)); 
+            lbl.setForeground(Color.RED);                
+            
+        } else if (status.equalsIgnoreCase("COOKING") || status.equalsIgnoreCase("DIMASAK")) {
+            // KUNING/ORANYE (Proses)
+            lbl.setBackground(new Color(255, 245, 200)); 
+            lbl.setForeground(new Color(200, 100, 0));   
+            
+        } else if (status.equalsIgnoreCase("READY") || status.equalsIgnoreCase("SIAP_DIAMBIL")) {
+            // BIRU MUDA (Siap Diambil - Perhatian)
+            lbl.setBackground(new Color(220, 240, 255)); 
+            lbl.setForeground(new Color(0, 100, 200));   
+            
         } else {
-            // Sedang Disiapkan / Lainnya
-            lbl.setBackground(new Color(255, 245, 200)); // Kuning Muda
-            lbl.setForeground(new Color(200, 100, 0));   // Oranye
+            // PENDING / Default
+            // ABU-ABU (Menunggu Konfirmasi)
+            lbl.setBackground(new Color(240, 240, 240)); 
+            lbl.setForeground(Color.GRAY);
         }
 
         return lbl;

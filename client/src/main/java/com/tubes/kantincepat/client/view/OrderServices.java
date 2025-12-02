@@ -87,9 +87,10 @@ public class OrderServices {
                                         String name = det[1];
                                         int price = Integer.parseInt(det[2]);
                                         int qty = Integer.parseInt(det[3]);
+                                        String mImg = det[4].equals("null") ? "" : det[4];
 
                                         // Buat objek MenuItem sementara
-                                        MenuItem mi = new MenuItem(menuId, name, "-", price, "Food", null, true);
+                                        MenuItem mi = new MenuItem(menuId, name, "-", price, "", mImg, true);
                                         
                                         // Masukkan ke list sebanyak qty agar hitungan di Invoice benar
                                         for(int k=0; k<qty; k++) {

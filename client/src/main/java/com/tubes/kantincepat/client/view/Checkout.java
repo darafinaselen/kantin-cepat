@@ -45,7 +45,7 @@ public class Checkout extends JPanel {
         
         try {
             // Ganti "illustration_success.png" dengan nama file gambarmu
-            ImageIcon originalIcon = GUIUtils.loadImageIcon("checkout.png", 300, 300);
+            ImageIcon originalIcon = GUIUtils.loadImageIcon("checkout.png", 240, 240);
             imageLabel.setIcon(new ImageIcon(originalIcon.getImage()));
         } catch (Exception e) {
             imageLabel.setText("[Gambar Ilustrasi]");

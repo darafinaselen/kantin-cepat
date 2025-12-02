@@ -251,7 +251,7 @@ public class Menu_Bag extends JPanel {
                     refreshCartData();
                     
                     // Kembali ke Home
-                    mainApp.showView("HOME");
+                    mainApp.showView("SUCCESS");
                 } else {
                     JOptionPane.showMessageDialog(null, "Gagal Order. Cek koneksi server.");
                 }
