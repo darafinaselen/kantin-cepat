@@ -194,9 +194,21 @@ public class GUIUtils {
         return field;
     }
 
+    public static JTextField createRoundedTextFieldForKitchen(String tooltip) {
+        JTextField field = new RoundedFieldStyle(tooltip);
+        field.setMaximumSize(new Dimension(300, 45)); 
+        return field;
+    }
+
     public static JPasswordField createRoundedPasswordField() {
         JPasswordField field = new RoundedPassStyle();
         field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
+        return field;
+    }
+
+    public static JPasswordField createRoundedPasswordFieldForKitchen() {
+        JPasswordField field = new RoundedPassStyle();
+        field.setMaximumSize(new Dimension(300, 45));
         return field;
     }
 
@@ -235,6 +247,28 @@ public class GUIUtils {
 
         p.add(labelWrapper);
         p.add(field);
+        p.add(Box.createRigidArea(new Dimension(0, 10)));
+    }
+
+    public static void addLabelAndFieldForKitchen(JPanel p, String labelText, JComponent field) {
+        // Wrapper vertikal untuk label + field
+        JPanel group = new JPanel();
+        group.setLayout(new BoxLayout(group, BoxLayout.Y_AXIS));
+        group.setOpaque(false);
+        group.setAlignmentX(Component.CENTER_ALIGNMENT); // seluruh group di tengah
+
+        JLabel lbl = new JLabel(labelText);
+        lbl.setFont(GUIUtils.getCustomFont("Lato-Bold.ttf", 14f));
+        lbl.setAlignmentX(Component.CENTER_ALIGNMENT);    // teks label di tengah
+
+        // pastikan field juga di tengah
+        field.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        group.add(lbl);
+        group.add(Box.createRigidArea(new Dimension(0, 5)));
+        group.add(field);
+
+        p.add(group);
         p.add(Box.createRigidArea(new Dimension(0, 10)));
     }
 

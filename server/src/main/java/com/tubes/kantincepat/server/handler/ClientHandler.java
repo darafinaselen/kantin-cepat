@@ -5,11 +5,17 @@ import java.io.*;
 import java.net.Socket;
 import java.sql.*;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class ClientHandler implements Runnable{
     private Socket socket;
     private BufferedReader in;
     private PrintWriter out;
+
+    private static List<ClientHandler> clients = Collections.synchronizedList(new ArrayList<>());
+    private int userId = 0;
 
     public ClientHandler(Socket socket) {
         this.socket = socket;
@@ -17,6 +23,7 @@ public class ClientHandler implements Runnable{
 
     @Override
     public void run() {
+        clients.add(this);
         try {
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new PrintWriter(socket.getOutputStream(), true);
@@ -26,9 +33,11 @@ public class ClientHandler implements Runnable{
                 System.out.println("📩 Request: " + message);
                 
                 String[] parts;
-                if (message.contains(";")) {
+                if (message.startsWith("CREATE_ORDER")) {
+                    parts = message.split(":");
+                } else if (message.contains(";")) {
                     parts = message.split(";");
-                } else {
+                }else {
                     parts = message.split(":");
                 }
 
@@ -52,6 +61,15 @@ public class ClientHandler implements Runnable{
                         break;
                     case "GET_USER":
                         handleGetUser(parts);
+                        break;
+                    case "GET_KITCHEN_ORDERS":
+                        handleGetKitchenOrders();
+                        break;
+                    case "UPDATE_ORDER_STATUS":
+                        handleUpdateOrderStatus(parts);
+                        break;
+                    case "GET_ORDER_HISTORY":
+                        handleGetOrderHistory();
                         break;
                     case "SEND_CHAT":
                         handleSendChat(parts);
@@ -80,6 +98,18 @@ public class ClientHandler implements Runnable{
                         break;
                     case "DELETE_MENU":
                         handleDeleteMenu(parts);
+                        break;
+                    case "GET_CHAT_MESSAGES":
+                        handleGetChatMessages(parts);
+                        break;
+                    case "CHAT_LOGIN":
+                        handleChatLogin(parts);
+                        break;
+                    case "MARK_READ":
+                        handleMarkRead(parts);
+                        break;
+                    case "MARK_ALL_READ":
+                        handleMarkAllRead();
                         break;
                     default:
                         out.println("ERROR:Unknown Command");
@@ -374,31 +404,31 @@ public class ClientHandler implements Runnable{
         }
     }
 
-    private void handleSendChat(String[] parts) {
-        // Format: SEND_CHAT:SenderID:Message
-        // Receiver ID kita set NULL (artinya dikirim ke Admin/Store)
-        if (parts.length < 3) return;
+    // private void handleSendChat(String[] parts) {
+    //     // Format: SEND_CHAT:SenderID:Message
+    //     // Receiver ID kita set NULL (artinya dikirim ke Admin/Store)
+    //     if (parts.length < 3) return;
 
-        int senderId = Integer.parseInt(parts[1]);
-        String messageContent = parts[2];
+    //     int senderId = Integer.parseInt(parts[1]);
+    //     String messageContent = parts[2];
 
-        String sql = "INSERT INTO chat_messages (sender_id, receiver_id, message, sent_at) VALUES (?, NULL, ?, NOW())";
+    //     String sql = "INSERT INTO chat_messages (sender_id, receiver_id, message, sent_at) VALUES (?, NULL, ?, NOW())";
 
-        try (Connection conn = DatabaseConnetion.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+    //     try (Connection conn = DatabaseConnetion.getConnection();
+    //          PreparedStatement stmt = conn.prepareStatement(sql)) {
             
-            stmt.setInt(1, senderId);
-            stmt.setString(2, messageContent);
+    //         stmt.setInt(1, senderId);
+    //         stmt.setString(2, messageContent);
             
-            int rows = stmt.executeUpdate();
-            if (rows > 0) out.println("CHAT_SUCCESS");
-            else out.println("CHAT_FAILED");
+    //         int rows = stmt.executeUpdate();
+    //         if (rows > 0) out.println("CHAT_SUCCESS");
+    //         else out.println("CHAT_FAILED");
 
-        } catch (SQLException e) {
-            e.printStackTrace();
-            out.println("ERROR:DB Error");
-        }
-    }
+    //     } catch (SQLException e) {
+    //         e.printStackTrace();
+    //         out.println("ERROR:DB Error");
+    //     }
+    // }
 
     private void handleGetChat(String[] parts) {
         // Format: GET_CHAT:UserID
@@ -630,7 +660,6 @@ public class ClientHandler implements Runnable{
         }
     }
 
-    // --- UPDATE STATUS ORDER (Batalkan/Proses) ---
     private void handleUpdateStatus(String[] parts) {
         // Format: UPDATE_STATUS;OrderID;NewStatus
         if (parts.length < 3) return;
@@ -639,6 +668,86 @@ public class ClientHandler implements Runnable{
         String newStatus = parts[2];
 
         try (Connection conn = DatabaseConnetion.getConnection()) {
+            String sql = "UPDATE orders SET status = ?::order_status WHERE order_id = ?";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, newStatus);
+            stmt.setInt(2, orderId);
+
+            int rows = stmt.executeUpdate();
+            if (rows > 0) {
+                out.println("UPDATE_SUCCESS");
+                System.out.println("✅ Order ID " + orderId + " updated to " + newStatus);
+            } else {
+                out.println("UPDATE_FAILED");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            out.println("ERROR:Database Error");
+        }
+    }
+
+    private void handleGetKitchenOrders() {
+        try (Connection conn = DatabaseConnetion.getConnection()) {
+            String sql = """
+                    SELECT 
+                        o.order_id,
+                        u.full_name,
+                        o.status,
+                        COALESCE(
+                            STRING_AGG(od.quantity::text || 'x ' || mi.name, ', ' ORDER BY mi.name),
+                            ''
+                        ) AS items
+                    FROM orders o
+                    JOIN users u ON u.user_id = o.user_id
+                    LEFT JOIN order_details od ON od.order_id = o.order_id
+                    LEFT JOIN menu_items mi ON mi.menu_id = od.menu_id
+                    WHERE o.status IN ('PENDING', 'COOKING', 'READY')
+                    GROUP BY o.order_id, u.full_name, o.status
+                    ORDER BY o.order_date DESC;
+                    """;
+
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery();
+
+            StringBuilder sb = new StringBuilder();
+            boolean hasAny  = false;
+
+            while (rs.next()) {
+                hasAny = true;
+                int orderId     = rs.getInt("order_id");
+                String fullname = rs.getString("full_name");
+                String status   = rs.getString("status");
+                String items    = rs.getString("items");
+
+                if (sb.length() == 0) sb.append("ORDERS:");
+                else sb.append(";");
+
+                sb.append(orderId)
+                  .append("|").append(sanitize(fullname))
+                  .append("|").append(status)
+                  .append("|").append(items == null ? "" : sanitize(items));
+            }
+
+            if (!hasAny) out.println("NO_ORDERS");
+            else out.println(sb.toString());
+
+        } catch (SQLException e) {
+            System.out.println("SQL ERROR di GET_KITCHEN_ORDERS: " + e.getMessage());
+            e.printStackTrace();
+            out.println("NO_ORDERS:DB_ERROR");
+        }
+    }
+
+    private void handleUpdateOrderStatus(String[] parts) {
+        if (parts.length < 3) {
+            out.println("STATUS_FAILED:FORMAT_SALAH");
+            return;
+        }
+
+        try (Connection conn = DatabaseConnetion.getConnection()) {
+            int orderId    = Integer.parseInt(parts[1]);
+            String newStatus = parts[2];
+
             String sql = "UPDATE orders SET status = ?::order_status WHERE order_id = ?";
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setString(1, newStatus);
@@ -667,10 +776,6 @@ public class ClientHandler implements Runnable{
         int id = Integer.parseInt(parts[1]);
     
         try (Connection conn = DatabaseConnetion.getConnection()) {
-            // PERHATIAN: Jika menu sudah pernah dipesan (ada di order_details),
-            // query DELETE ini mungkin gagal karena Foreign Key constraint.
-            // Jika gagal, sebaiknya gunakan Soft Delete (UPDATE menu_items SET is_available=false...)
-            
             String sql = "DELETE FROM menu_items WHERE menu_id = ?";
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setInt(1, id);
@@ -688,5 +793,228 @@ public class ClientHandler implements Runnable{
             // Jika gagal hapus karena Foreign Key (menu pernah dipesan), beri pesan error
             out.println("FAILED:Database Error (Mungkin menu sedang digunakan di order)");
         }
+    }
+
+    private void handleGetOrderHistory() {
+        try (Connection conn = DatabaseConnetion.getConnection()) {
+            String sql = """
+                    SELECT 
+                        o.order_id,
+                        u.full_name,
+                        o.status,
+                        COALESCE(
+                            STRING_AGG(od.quantity::text || 'x ' || mi.name, ', ' ORDER BY mi.name),
+                            ''
+                        ) AS items
+                    FROM orders o
+                    JOIN users u ON u.user_id = o.user_id
+                    LEFT JOIN order_details od ON od.order_id = o.order_id
+                    LEFT JOIN menu_items mi ON mi.menu_id = od.menu_id
+                    WHERE o.status = 'COMPLETED'
+                    GROUP BY o.order_id, u.full_name, o.status
+                    ORDER BY o.order_date DESC;
+                    """;
+
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery();
+
+            StringBuilder sb = new StringBuilder();
+            boolean hasAny  = false;
+
+            while (rs.next()) {
+                hasAny = true;
+                int orderId     = rs.getInt("order_id");
+                String fullname = rs.getString("full_name");
+                String status   = rs.getString("status");
+                String items    = rs.getString("items");
+
+                if (sb.length() == 0) sb.append("ORDERS:");
+                else sb.append(";");
+
+                sb.append(orderId)
+                  .append("|").append(sanitize(fullname))
+                  .append("|").append(status)
+                  .append("|").append(items == null ? "" : sanitize(items));
+            }
+
+            if (!hasAny) out.println("NO_ORDERS");
+            else out.println(sb.toString());
+
+        } catch (SQLException e) {
+            System.out.println("SQL ERROR di GET_ORDER_HISTORY: " + e.getMessage());
+            e.printStackTrace();
+            out.println("NO_ORDERS:DB_ERROR");
+        }
+    }
+
+    // ================== LIVE CHAT ==================
+
+    private void handleSendChat(String[] parts) {
+        if (this.userId <= 0) {
+            out.println("CHAT_FAILED:NOT_LOGGED_IN");
+            return;
+        }
+        if (parts.length < 2) {
+            out.println("CHAT_FAILED:FORMAT_SALAH");
+            return;
+        }
+
+        String message = parts[1];
+
+        try (Connection conn = DatabaseConnetion.getConnection()) {
+            String sql = "INSERT INTO chat_messages (sender_id, message, is_read) VALUES (?, ?, FALSE)";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, this.userId);
+            stmt.setString(2, message);
+
+            int rows = stmt.executeUpdate();
+            if (rows > 0) {
+                out.println("CHAT_SENT");
+                broadcastChatSimple(this.userId, message, false);
+            } else {
+                out.println("CHAT_FAILED");
+            }
+        } catch (SQLException e) {
+            System.out.println("SQL ERROR di SEND_CHAT: " + e.getMessage());
+            e.printStackTrace();
+            out.println("CHAT_FAILED:DB_ERROR");
+        }
+    }
+
+    private static void broadcastChatSimple(int senderId, String message, boolean isRead) {
+        String sanitized = message.replace(":", " ");
+        String payload = "CHAT_MESSAGE:" + senderId + ":" + sanitized + ":" + isRead;
+
+        synchronized (clients) {
+            for (ClientHandler ch : clients) {
+                if (ch.out != null) {
+                    ch.out.println(payload);
+                }
+            }
+        }
+    }
+
+    private void handleMarkRead(String[] parts) {
+        if (parts.length < 2) return;
+
+        try (Connection conn = DatabaseConnetion.getConnection()) {
+            int senderId = Integer.parseInt(parts[1]);
+            String sql = "UPDATE chat_messages SET is_read = TRUE WHERE sender_id = ? AND is_read = FALSE";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, senderId);
+
+            int updated = stmt.executeUpdate();
+            if (updated > 0) {
+                broadcastReadStatus(senderId);
+            }
+        } catch (SQLException | NumberFormatException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private void handleMarkAllRead() {
+        try (Connection conn = DatabaseConnetion.getConnection()) {
+            String sql = "UPDATE chat_messages SET is_read = TRUE WHERE sender_id != ? AND is_read = FALSE";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, this.userId);
+
+            int updated = stmt.executeUpdate();
+            if (updated > 0) {
+                String sqlSenders = "SELECT DISTINCT sender_id FROM chat_messages WHERE sender_id != ?";
+                PreparedStatement stmtSenders = conn.prepareStatement(sqlSenders);
+                stmtSenders.setInt(1, this.userId);
+                ResultSet rs = stmtSenders.executeQuery();
+                while (rs.next()) {
+                    int senderId = rs.getInt("sender_id");
+                    broadcastReadStatus(senderId);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void broadcastReadStatus(int senderId) {
+        String payload = "READ_STATUS:" + senderId;
+        synchronized (clients) {
+            for (ClientHandler ch : clients) {
+                if (ch.out != null) {
+                    ch.out.println(payload);
+                }
+            }
+        }
+    }
+
+    private void handleGetChatMessages(String[] parts) {
+        if (parts.length < 3) {
+            out.println("NO_MESSAGES");
+            return;
+        }
+
+        try (Connection conn = DatabaseConnetion.getConnection()) {
+            int userId = Integer.parseInt(parts[1]);
+            int adminId = Integer.parseInt(parts[2]);
+
+            String sql = """
+                    SELECT sender_id, message, sent_at, is_read
+                    FROM chat_messages
+                    WHERE (sender_id = ? AND receiver_id = ?)
+                       OR (sender_id = ? AND receiver_id = ?)
+                    ORDER BY sent_at ASC
+                    """;
+
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, userId);
+            stmt.setInt(2, adminId);
+            stmt.setInt(3, adminId);
+            stmt.setInt(4, userId);
+
+            ResultSet rs = stmt.executeQuery();
+
+            StringBuilder sb = new StringBuilder();
+            boolean hasAny = false;
+
+            while (rs.next()) {
+                hasAny = true;
+                int senderId = rs.getInt("sender_id");
+                String message = rs.getString("message");
+                String timestamp = rs.getString("sent_at");
+                boolean isRead = rs.getBoolean("is_read");
+
+                if (sb.length() == 0) sb.append("MESSAGES:");
+                else sb.append(";");
+
+                sb.append(senderId)
+                  .append("|").append(sanitize(message))
+                  .append("|").append(timestamp)
+                  .append("|").append(isRead);
+            }
+
+            if (!hasAny) out.println("NO_MESSAGES");
+            else out.println(sb.toString());
+
+        } catch (SQLException | NumberFormatException e) {
+            System.out.println("SQL ERROR di GET_CHAT_MESSAGES: " + e.getMessage());
+            e.printStackTrace();
+            out.println("NO_MESSAGES:DB_ERROR");
+        }
+    }
+
+    private void handleChatLogin(String[] parts) {
+        if (parts.length < 2) {
+            out.println("CHAT_LOGIN_FAILED");
+            return;
+        }
+        try {
+            this.userId = Integer.parseInt(parts[1]);
+            out.println("CHAT_LOGIN_OK");
+        } catch (NumberFormatException e) {
+            out.println("CHAT_LOGIN_FAILED");
+        }
+    }
+
+    private String sanitize(String s) {
+        if (s == null) return "";
+        return s.replace("|", "-").replace(";", "-");
     }
 }
