@@ -2,7 +2,7 @@ package com.tubes.kantincepat.client;
 
 import com.tubes.kantincepat.client.view.KitchenHistoryPanel;
 import com.tubes.kantincepat.client.view.KitchenPanel;
-import com.tubes.kantincepat.client.view.LoginPanel;
+import com.tubes.kantincepat.client.view.KitchenLoginPanel;
 import com.tubes.kantincepat.client.view.LiveChat;
 
 import javax.swing.*;
@@ -60,7 +60,7 @@ public class KitchenApp extends JFrame {
         mainPanel = new JPanel(cardLayout);
 
         // auth
-        mainPanel.add(new LoginPanel(this), "LOGIN");
+        mainPanel.add(new KitchenLoginPanel(this), "LOGIN");
         
         // Satu-satunya instance
         kitchenPanel = new KitchenPanel(this);
