@@ -1,12 +1,12 @@
 package com.tubes.kantincepat.server.handler;
 
-// Sesuaikan nama package database kamu (DatabaseConnetion atau Database)
-import com.tubes.kantincepat.server.database.DatabaseConnetion; 
+import com.tubes.kantincepat.server.database.DatabaseConnetion;
 import java.io.*;
 import java.net.Socket;
 import java.sql.*;
+import java.text.SimpleDateFormat;
 
-public class ClientHandler implements Runnable {
+public class ClientHandler implements Runnable{
     private Socket socket;
     private BufferedReader in;
     private PrintWriter out;
@@ -25,10 +25,13 @@ public class ClientHandler implements Runnable {
             while ((message = in.readLine()) != null) {
                 System.out.println("📩 Request: " + message);
                 
-                // PENTING: Split pakai ";" agar aman (karena Client pakai ";")
-                // Kalau Client pakai ":", ganti split(":")
-                // Tapi saran saya pakai ";" karena di Client saya set pakai ";"
-                String[] parts = message.split(";"); 
+                String[] parts;
+                if (message.contains(";")) {
+                    parts = message.split(";");
+                } else {
+                    parts = message.split(":");
+                }
+
                 String command = parts[0];
 
                 switch (command) {
@@ -38,14 +41,43 @@ public class ClientHandler implements Runnable {
                     case "REGISTER":
                         handleRegister(parts);
                         break;
-                    // --- TAMBAHAN BARU ---
+                    case "GET_MENU":
+                        handleGetMenu();
+                        break;
+                    case "CREATE_ORDER":
+                        handleCreateOrder(parts); 
+                        break;
+                    case "GET_HISTORY":
+                        handleGetHistory(parts);
+                        break;
+                    case "GET_USER":
+                        handleGetUser(parts);
+                        break;
+                    case "SEND_CHAT":
+                        handleSendChat(parts);
+                        break;
+                    case "GET_CHAT":
+                        handleGetChat(parts);
+                        break;
+                    // ADMIN
                     case "ADD_MENU":
                         handleAddMenu(parts);
                         break;
                     case "ADD_USER":
                         handleAddUser(parts);
                         break;
-                    // ---------------------
+                    case "GET_USERS":
+                        handleGetUsers();
+                        break;
+                    case "GET_ALL_MENUS":
+                        handleGetAllMenus();
+                        break;
+                    case "GET_ALL_ORDERS":
+                        handleGetAllOrders();
+                        break;
+                    case "UPDATE_STATUS":
+                        handleUpdateStatus(parts);
+                        break;
                     default:
                         out.println("ERROR:Unknown Command");
                 }
@@ -56,8 +88,7 @@ public class ClientHandler implements Runnable {
     }
 
     private void handleLogin(String[] parts) {
-        // Format Client Lama mungkin pakai ":" -> Sesuaikan Split di atas
-        // Asumsi format: LOGIN;username;password
+        // Format: LOGIN:username:password
         if (parts.length < 3) { out.println("LOGIN_FAILED:Invalid Format"); return; }
         
         String inputIdentitas = parts[1];
@@ -71,13 +102,21 @@ public class ClientHandler implements Runnable {
             stmt.setString(3, password);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                String role = rs.getString("role"); 
+                int id = rs.getInt("user_id");
+                String role = rs.getString("role");
                 String fullname = rs.getString("full_name");
-                out.println("LOGIN_SUCCESS:" + role + ":" + fullname);
+                String username = rs.getString("username");
+                String email = rs.getString("email");
+                String phone = rs.getString("phone_number");
+
+                if (phone == null) phone = "-";
+
+                out.println("LOGIN_SUCCESS:" + role + ":" + fullname + ":" + id + ":" + username + ":" + email + ":" + phone);
+                System.out.println("✅ User Logged In: " + username);
             } else {
                 out.println("LOGIN_FAILED:Wrong credentials");
             }
-        } catch (SQLException e) {
+        }catch (SQLException e) {
             e.printStackTrace();
             out.println("LOGIN_ERROR:Database Error");
         }
@@ -89,11 +128,11 @@ public class ClientHandler implements Runnable {
         try (Connection conn = DatabaseConnetion.getConnection()) {
             String sql = "INSERT INTO users (username, email, password, full_name, phone_number, role) VALUES (?, ?, ?, ?, ?, 'CUSTOMER')";
             PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setString(1, parts[1]); 
-            stmt.setString(2, parts[2]); 
-            stmt.setString(3, parts[3]); 
-            stmt.setString(4, parts[4]); 
-            stmt.setString(5, parts[5]); 
+            stmt.setString(1, parts[1]); // username
+            stmt.setString(2, parts[2]); // email
+            stmt.setString(3, parts[3]); // password
+            stmt.setString(4, parts[4]); // full_name
+            stmt.setString(5, parts[5]); // phone_number
 
             int rows = stmt.executeUpdate();
             if (rows > 0) out.println("REGISTER_SUCCESS");
@@ -105,70 +144,513 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    // --- FITUR BARU: ADD MENU ---
-    private void handleAddMenu(String[] parts) {
-        // Format: ADD_MENU;Nama;Deskripsi;Harga;Kategori;Status;Gambar
-        if (parts.length < 6) { out.println("ERROR:Data Menu Tidak Lengkap"); return; }
+    private void handleGetMenu() {
+        // Query ambil data (Filter yang is_available = true jika mau menu yg ready saja)
+        String sql = "SELECT menu_id, name, price, category, image_path, description FROM menu_items WHERE is_available = true ORDER BY menu_id ASC";
 
-        try (Connection conn = DatabaseConnetion.getConnection()) {
-            // CASTING KE ENUM POSTGRESQL (PENTING!)
-            String sql = "INSERT INTO menu_items (name, description, price, category, is_available, image_path) VALUES (?, ?, ?, ?::menu_category, ?, ?)";
-            PreparedStatement stmt = conn.prepareStatement(sql);
-            
-            stmt.setString(1, parts[1]); // Nama
-            stmt.setString(2, parts[2]); // Deskripsi
-            
-            // Harga (Parse Double)
-            try {
-                stmt.setDouble(3, Double.parseDouble(parts[3])); 
-            } catch (NumberFormatException e) {
-                out.println("ERROR:Harga harus angka");
-                return;
+        try (Connection conn = DatabaseConnetion.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            StringBuilder sb = new StringBuilder();
+
+            while (rs.next()) {
+                // 1. ID
+                int id = rs.getInt("menu_id");
+                
+                // 2. Nama
+                String name = rs.getString("name");
+                
+                // 3. Harga (Di DB numeric, kita ambil int-nya saja biar gampang di client)
+                int price = rs.getInt("price");
+                
+                // 4. Kategori (DB type menu_category dibaca sebagai String aman)
+                String category = rs.getString("category");
+                
+                // 5. Gambar (PENTING: Handle null dan path folder)
+                String rawImg = rs.getString("image_path");
+                String finalImg = "null";
+                
+                if (rawImg != null && !rawImg.isEmpty()) {
+                    // Kalau di DB tertulis "assets/nasi.png", kita ambil "nasi.png" saja
+                    // Supaya GUIUtils tidak bingung (karena dia sudah nambahin /assets/ sendiri)
+                    if (rawImg.contains("/")) {
+                        finalImg = rawImg.substring(rawImg.lastIndexOf("/") + 1);
+                    } else {
+                        finalImg = rawImg;
+                    }
+                }
+
+                // 6. Deskripsi
+                String desc = rs.getString("description");
+                if (desc == null) desc = "-";
+
+                // GABUNGKAN DATA (Pemisah antar field "|", antar baris ";")
+                sb.append(id).append("|")
+                  .append(name).append("|")
+                  .append(price).append("|")
+                  .append(category).append("|")
+                  .append(finalImg).append("|") // Gambar yang sudah bersih
+                  .append(desc)
+                  .append(";");
             }
 
-            stmt.setString(4, parts[4]); // Kategori (MEALS, DRINK, SNACK)
-            
-            // Status (TRUE/FALSE)
-            boolean isAvailable = parts[5].toUpperCase().startsWith("TRUE");
-            stmt.setBoolean(5, isAvailable);
-            
-            // Gambar (Default jika kosong)
-            String img = (parts.length > 6) ? parts[6] : "assets/no-image.png";
-            stmt.setString(6, img);
-
-            int rows = stmt.executeUpdate();
-            if (rows > 0) out.println("SUCCESS");
-            else out.println("FAILED:Gagal Insert");
+            // Kirim ke Client
+            if (sb.length() > 0) {
+                out.println("MENU_DATA:" + sb.toString());
+                System.out.println("✅ Menu data sent (" + sb.length() + " chars)");
+            } else {
+                out.println("MENU_DATA:"); // Kirim kosong jika tidak ada menu
+            }
 
         } catch (SQLException e) {
             e.printStackTrace();
-            out.println("FAILED:Database Error - " + e.getMessage());
+            System.out.println("❌ Error fetching menu: " + e.getMessage());
+            out.println("ERROR:Database Error");
         }
     }
 
-    // --- FITUR BARU: ADD USER (DARI ADMIN) ---
-    private void handleAddUser(String[] parts) {
-        // Format: ADD_USER;Username;Pass;Email;Fullname;Phone;Role
-        if (parts.length < 7) { out.println("ERROR:Data User Tidak Lengkap"); return; }
+    private void handleCreateOrder(String[] parts) {
+        // Format: CREATE_ORDER:UserID:Total:Notes:ItemsData
+        // parts[0]=CMD, parts[1]=UserID, parts[2]=Total, parts[3]=Notes, parts[4]=Items
+        
+        if (parts.length < 5) {
+            out.println("ORDER_FAILED:Data Incomplete");
+            return;
+        }
+        try {
+            int userId = Integer.parseInt(parts[1]);
+            long totalAmount = Long.parseLong(parts[2]);
+            String notes = parts[3];
+            String itemsData = parts[4];
 
-        try (Connection conn = DatabaseConnetion.getConnection()) {
-            String sql = "INSERT INTO users (username, password, email, full_name, phone_number, role) VALUES (?, ?, ?, ?, ?, ?::user_role)";
-            PreparedStatement stmt = conn.prepareStatement(sql);
+            Connection conn = DatabaseConnetion.getConnection();
+            conn.setAutoCommit(false);
+
+            // 1. INSERT HEADER
+            String sqlHeader = "INSERT INTO orders (user_id, total_amount, status, order_date) VALUES (?, ?, 'PENDING', NOW())";
+            PreparedStatement psHeader = conn.prepareStatement(sqlHeader, Statement.RETURN_GENERATED_KEYS);
+            psHeader.setInt(1, userId);
+            psHeader.setBigDecimal(2, java.math.BigDecimal.valueOf(totalAmount));
+            psHeader.executeUpdate();
+
+            ResultSet rsKeys = psHeader.getGeneratedKeys();
+            int newOrderId = -1;
+            if (rsKeys.next()) {
+                newOrderId = rsKeys.getInt(1);
+            } else {
+                throw new SQLException("Gagal ID");
+            }
+
+
+      // 2. INSERT DETAILS
+            String sqlDetail = "INSERT INTO order_details (order_id, menu_id, quantity, subtotal, notes) VALUES (?, ?, ?, ?, ?)";
+            String sqlPrice  = "SELECT price FROM menu_items WHERE menu_id = ?";
             
-            stmt.setString(1, parts[1]); 
-            stmt.setString(2, parts[2]); 
-            stmt.setString(3, parts[3]); 
-            stmt.setString(4, parts[4]); 
-            stmt.setString(5, parts[5]); 
-            stmt.setString(6, parts[6]); // Role (ADMIN, KITCHEN, CUSTOMER)
+            PreparedStatement psDetail = conn.prepareStatement(sqlDetail);
+            PreparedStatement psPrice = conn.prepareStatement(sqlPrice);
 
-            int rows = stmt.executeUpdate();
-            if (rows > 0) out.println("SUCCESS");
-            else out.println("FAILED");
+            String[] itemPairs = itemsData.split(";");
+            for (String pair : itemPairs) {
+                String[] val = pair.split(","); 
+                int menuId = Integer.parseInt(val[0]);
+                int qty = Integer.parseInt(val[1]);
+
+                psPrice.setInt(1, menuId);
+                ResultSet rsPrice = psPrice.executeQuery();
+                int price = 0;
+                if (rsPrice.next()) price = rsPrice.getInt("price");
+                rsPrice.close();
+
+                psDetail.setInt(1, newOrderId);
+                psDetail.setInt(2, menuId);
+                psDetail.setInt(3, qty);
+                psDetail.setBigDecimal(4, java.math.BigDecimal.valueOf((long)price * qty));
+                psDetail.setString(5, notes); 
+                
+                psDetail.addBatch();
+            }
+
+            psDetail.executeBatch();
+            conn.commit();
+            System.out.println("✅ Order Created ID: " + newOrderId);
+            out.println("ORDER_SUCCESS:" + newOrderId);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            out.println("ORDER_FAILED:Database Error");
+        }
+    }
+
+    private void handleGetHistory(String[] parts) {
+        if (parts.length < 2) return;
+        int userId = Integer.parseInt(parts[1]);
+
+        String sql = "SELECT o.order_id, o.order_date, o.total_amount, o.status, " +
+                     "MAX(od.notes) as notes, " +  
+                     "string_agg(m.name || ' (x' || od.quantity || ')', ', ') as summary, " +
+                     "string_agg(m.menu_id || ',' || m.name || ',' || m.price || ',' || od.quantity, '#') as items_detail " + 
+                     "FROM orders o " +
+                     "JOIN order_details od ON o.order_id = od.order_id " +
+                     "JOIN menu_items m ON od.menu_id = m.menu_id " +
+                     "WHERE o.user_id = ? " +
+                     "GROUP BY o.order_id " +
+                     "ORDER BY o.order_date DESC";
+
+        try (Connection conn = DatabaseConnetion.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, userId);
+            ResultSet rs = stmt.executeQuery();
+            StringBuilder sb = new StringBuilder();
+            SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy, HH:mm");
+
+            while (rs.next()) {
+                int id = rs.getInt("order_id");
+                String date = sdf.format(rs.getTimestamp("order_date"));
+                int total = rs.getBigDecimal("total_amount").intValue();
+                String status = rs.getString("status");
+                String summary = rs.getString("summary");
+
+                String notes = rs.getString("notes");
+                if (notes == null) notes = "-";
+
+                String itemsDetail = rs.getString("items_detail");
+
+                sb.append(id).append("|")
+                  .append(date).append("|")
+                  .append(total).append("|")
+                  .append(status).append("|")
+                  .append(summary).append("|")     
+                  .append(notes).append("|")       
+                  .append(itemsDetail).append(";");
+            }
+            out.println("HISTORY_DATA:" + sb.toString());
 
         } catch (SQLException e) {
             e.printStackTrace();
-            out.println("FAILED:Username/Email Duplicate");
+            out.println("ERROR:History DB Error");
+        }
+    }
+
+    private void handleGetUser(String[] parts) {
+        // Format: GET_USER:UserID
+        if (parts.length < 2) return;
+        
+        int userId = Integer.parseInt(parts[1]);
+        String sql = "SELECT * FROM users WHERE user_id = ?";
+        
+        try (Connection conn = DatabaseConnetion.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, userId);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                // Format: USER_DATA:ID:Username:Email:Fullname:Phone:Role
+                String fullname = rs.getString("full_name");
+                if (fullname == null) fullname = "-";
+                
+                String phone = rs.getString("phone_number");
+                if (phone == null) phone = "-";
+
+                String resp = "USER_DATA:" + 
+                              rs.getInt("user_id") + ":" +
+                              rs.getString("username") + ":" +
+                              rs.getString("email") + ":" +
+                              rs.getString("full_name") + ":" +
+                              rs.getString("phone_number") + ":" +
+                              rs.getString("role");
+                out.println(resp);
+            } else {
+                out.println("ERROR:User Not Found");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            out.println("ERROR:DB Error");
+        }
+    }
+
+    private void handleSendChat(String[] parts) {
+        // Format: SEND_CHAT:SenderID:Message
+        // Receiver ID kita set NULL (artinya dikirim ke Admin/Store)
+        if (parts.length < 3) return;
+
+        int senderId = Integer.parseInt(parts[1]);
+        String messageContent = parts[2];
+
+        String sql = "INSERT INTO chat_messages (sender_id, receiver_id, message, sent_at) VALUES (?, NULL, ?, NOW())";
+
+        try (Connection conn = DatabaseConnetion.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, senderId);
+            stmt.setString(2, messageContent);
+            
+            int rows = stmt.executeUpdate();
+            if (rows > 0) out.println("CHAT_SUCCESS");
+            else out.println("CHAT_FAILED");
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            out.println("ERROR:DB Error");
+        }
+    }
+
+    private void handleGetChat(String[] parts) {
+        // Format: GET_CHAT:UserID
+        if (parts.length < 2) return;
+        int userId = Integer.parseInt(parts[1]);
+
+        // Ambil pesan dimana User adalah PENGIRIM atau User adalah PENERIMA
+        String sql = "SELECT * FROM chat_messages WHERE sender_id = ? OR receiver_id = ? ORDER BY sent_at ASC";
+
+        try (Connection conn = DatabaseConnetion.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, userId);
+            stmt.setInt(2, userId);
+            ResultSet rs = stmt.executeQuery();
+            
+            StringBuilder sb = new StringBuilder();
+            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
+
+            while (rs.next()) {
+                // Format Respon: ID|SenderID|Message|Time;
+                sb.append(rs.getInt("chat_id")).append("|")
+                  .append(rs.getInt("sender_id")).append("|")
+                  .append(rs.getString("message")).append("|")
+                  .append(sdf.format(rs.getTimestamp("sent_at"))).append(";");
+            }
+            out.println("CHAT_HISTORY:" + sb.toString());
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            out.println("ERROR:DB Error");
+        }
+    }    
+
+        //ADMIN
+        private void handleAddMenu(String[] parts) {
+            // Format: ADD_MENU;Nama;Deskripsi;Harga;Kategori;Status;Gambar
+            if (parts.length < 6) { 
+                out.println("ERROR:Data Menu Tidak Lengkap"); 
+                return; 
+            }
+            try (Connection conn = DatabaseConnetion.getConnection()) {
+                // CASTING KE ENUM POSTGRESQL (PENTING!)
+                String sql = "INSERT INTO menu_items (name, description, price, category, is_available, image_path) VALUES (?, ?, ?, ?::menu_category, ?, ?)";
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                
+                stmt.setString(1, parts[1]); // Nama
+                stmt.setString(2, parts[2]); // Deskripsi
+                
+                // Harga (Parse Double)
+                try {
+                    String priceStr = parts[3].replaceAll("[^0-9]", ""); 
+                    stmt.setInt(3, Integer.parseInt(priceStr));
+                } catch (NumberFormatException e) {
+                    out.println("ERROR:Harga harus angka");
+                    return;
+                }
+    
+                stmt.setString(4, parts[4]); // Kategori (MEALS, DRINK, SNACK)
+                
+                // Status (TRUE/FALSE)
+                boolean isAvailable = parts[5].toUpperCase().contains("TRUE");
+                stmt.setBoolean(5, isAvailable);
+                
+                // Gambar (Default jika kosong)
+                String img = (parts.length > 6 && !parts[6].isEmpty()) ? parts[6] : "client\\src\\main\\resources\\assets\\no-image.png";
+                stmt.setString(6, img);
+    
+                int rows = stmt.executeUpdate();
+                if (rows > 0) out.println("SUCCESS");
+                else out.println("FAILED:Gagal Insert");
+    
+            } catch (SQLException e) {
+                e.printStackTrace();
+                out.println("FAILED:Database Error - " + e.getMessage());
+            }
+        }
+    
+        // --- FITUR BARU: ADD USER (DARI ADMIN) ---
+        private void handleAddUser(String[] parts) {
+            // Format: ADD_USER;Username;Pass;Email;Fullname;Phone;Role
+            if (parts.length < 7) { out.println("ERROR:Data User Tidak Lengkap"); return; }
+    
+            try (Connection conn = DatabaseConnetion.getConnection()) {
+                String sql = "INSERT INTO users (username, password, email, full_name, phone_number, role) VALUES (?, ?, ?, ?, ?, ?::user_role)";
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                
+                stmt.setString(1, parts[1]); 
+                stmt.setString(2, parts[2]); 
+                stmt.setString(3, parts[3]); 
+                stmt.setString(4, parts[4]); 
+                stmt.setString(5, parts[5]); 
+                stmt.setString(6, parts[6]); // Role (ADMIN, KITCHEN, CUSTOMER)
+    
+                int rows = stmt.executeUpdate();
+                if (rows > 0) out.println("SUCCESS");
+                else out.println("FAILED");
+    
+            } catch (SQLException e) {
+                e.printStackTrace();
+                out.println("FAILED:Username/Email Duplicate");
+            }    
+    }
+
+    // --- AMBIL SEMUA DATA USER UNTUK TABEL ADMIN ---
+    private void handleGetUsers() {
+        StringBuilder sb = new StringBuilder();
+        String sql = "SELECT user_id, username, email, full_name, phone_number, role FROM users ORDER BY user_id ASC";
+
+        try (Connection conn = DatabaseConnetion.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                String fullname = rs.getString("full_name");
+                if (fullname == null) fullname = "-";
+
+                String phone = rs.getString("phone_number");
+                if (phone == null) phone = "-";
+
+                // Format: ID;Username;Email;Nama;HP;Role#
+                sb.append(rs.getInt("user_id")).append(";")
+                  .append(rs.getString("username")).append(";")
+                  .append(rs.getString("email")).append(";")
+                  .append(fullname).append(";")
+                  .append(phone).append(";")
+                  .append(rs.getString("role"))
+                  .append("#"); // Pagar sebagai pemisah antar baris (row)
+            }
+
+            // Kirim response: LIST_USERS#data...
+            if (sb.length() > 0) {
+                out.println("LIST_USERS#" + sb.toString());
+            } else {
+                out.println("LIST_USERS#EMPTY");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            out.println("ERROR:Gagal mengambil data users");
+        }
+    }
+
+    // --- METHOD BARU: AMBIL SEMUA MENU UNTUK ADMIN ---
+    private void handleGetAllMenus() {
+        StringBuilder sb = new StringBuilder();
+        // Ambil semua data tanpa filter availability
+        String sql = "SELECT menu_id, name, description, price, category, is_available, image_path FROM menu_items ORDER BY menu_id ASC";
+
+        try (Connection conn = DatabaseConnetion.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                // Handle null strings
+                String desc = rs.getString("description");
+                if (desc == null) desc = "-";
+
+                String imgPath = rs.getString("image_path");
+                if (imgPath == null) imgPath = "null"; // Kirim string "null" jika kosong
+
+                // Format: ID;Nama;Deskripsi;Harga;Kategori;Available;PathGambar#
+                sb.append(rs.getInt("menu_id")).append(";")
+                  .append(rs.getString("name")).append(";")
+                  .append(desc).append(";")
+                  .append(rs.getInt("price")).append(";")
+                  .append(rs.getString("category")).append(";")
+                  .append(rs.getBoolean("is_available")).append(";") // true/false
+                  .append(imgPath)
+                  .append("#"); // Pemisah baris
+            }
+
+            if (sb.length() > 0) {
+                out.println("LIST_MENUS#" + sb.toString());
+            } else {
+                out.println("LIST_MENUS#EMPTY");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            out.println("ERROR:Gagal mengambil data menu");
+        }
+    }
+    // --- AMBIL SEMUA ORDER UNTUK ADMIN ---
+    private void handleGetAllOrders() {
+        // Query ini menggabungkan tabel orders, users, order_details, dan menu_items
+        // Tujuannya: Menampilkan Siapa yang pesan, Apa yang dipesan (digabung jadi 1 string), Total, Status, dll.
+        String sql = "SELECT o.order_id, u.full_name, o.order_date, o.total_amount, o.status, " +
+                     "MAX(od.notes) as notes, " +
+                     "string_agg(m.name || ' (x' || od.quantity || ')', ', ') as items_summary " +
+                     "FROM orders o " +
+                     "JOIN users u ON o.user_id = u.user_id " + // Join ke users untuk dapat nama
+                     "JOIN order_details od ON o.order_id = od.order_id " +
+                     "JOIN menu_items m ON od.menu_id = m.menu_id " +
+                     "GROUP BY o.order_id, u.full_name " +
+                     "ORDER BY o.order_date DESC";
+
+        try (Connection conn = DatabaseConnetion.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            StringBuilder sb = new StringBuilder();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+
+            while (rs.next()) {
+                String notes = rs.getString("notes");
+                if (notes == null) notes = "-";
+
+                // Format: ID;Pelanggan;Menu;Catatan;Total;Status;Tanggal#
+                sb.append(rs.getInt("order_id")).append(";")
+                  .append(rs.getString("full_name")).append(";")
+                  .append(rs.getString("items_summary")).append(";")
+                  .append(notes).append(";")
+                  .append(rs.getBigDecimal("total_amount").intValue()).append(";")
+                  .append(rs.getString("status")).append(";")
+                  .append(sdf.format(rs.getTimestamp("order_date")))
+                  .append("#");
+            }
+
+            if (sb.length() > 0) {
+                out.println("ALL_ORDERS#" + sb.toString());
+            } else {
+                out.println("ALL_ORDERS#EMPTY");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            out.println("ERROR:Gagal mengambil data order");
+        }
+    }
+
+    // --- UPDATE STATUS ORDER (Batalkan/Proses) ---
+    private void handleUpdateStatus(String[] parts) {
+        // Format: UPDATE_STATUS;OrderID;NewStatus
+        if (parts.length < 3) return;
+
+        int orderId = Integer.parseInt(parts[1]);
+        String newStatus = parts[2];
+
+        try (Connection conn = DatabaseConnetion.getConnection()) {
+            String sql = "UPDATE orders SET status = ?::order_status WHERE order_id = ?";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, newStatus);
+            stmt.setInt(2, orderId);
+
+            int rows = stmt.executeUpdate();
+            if (rows > 0) {
+                out.println("UPDATE_SUCCESS");
+                System.out.println("✅ Order ID " + orderId + " updated to " + newStatus);
+            } else {
+                out.println("UPDATE_FAILED");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            out.println("ERROR:Database Error");
         }
     }
 }

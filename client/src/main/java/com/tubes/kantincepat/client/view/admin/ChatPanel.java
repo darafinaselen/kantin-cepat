@@ -1,4 +1,4 @@
-package app;
+package com.tubes.kantincepat.client.view.admin;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;

@@ -1,9 +1,12 @@
-package app;
+package com.tubes.kantincepat.client.view.admin;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
+
+import com.tubes.kantincepat.client.net.ClientSocket;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
@@ -13,9 +16,10 @@ public class MenuPanel extends JPanel {
     private JComboBox<String> cbKategoriMenu, cbStatusMenu;
     private JLabel lblImagePreview;
     private ImageIcon selectedMenuIcon = null;
-    private SocketService socketService;
+    private ClientSocket socketService;
+    private DefaultTableModel tableModel;
 
-    public MenuPanel(SocketService socket) {
+    public MenuPanel(ClientSocket socket) {
         this.socketService = socket;
         setLayout(new BorderLayout(20, 20));
         setOpaque(false);
@@ -81,11 +85,13 @@ public class MenuPanel extends JPanel {
 
         // TABLE
         String[] columns = {"Foto", "ID", "Nama", "Deskripsi", "Harga", "Kategori", "Available"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0) {
+
+        tableModel = new DefaultTableModel(columns, 0) {
             public Class<?> getColumnClass(int column) { return column == 0 ? ImageIcon.class : Object.class; }
             public boolean isCellEditable(int r, int c) { return false; }
         };
-        JTable table = new JTable(model);
+
+        JTable table = new JTable(tableModel);
         StyleUtils.styleTable(table, 70);
         table.getColumnModel().getColumn(0).setCellRenderer(new StyleUtils.ImageRenderer());
 
@@ -93,7 +99,6 @@ public class MenuPanel extends JPanel {
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.getViewport().setBackground(Color.WHITE);
 
-        // LOGIC
         btnPilihFoto.addActionListener(e -> chooseImage());
         
         btnAdd.addActionListener(e -> {
@@ -105,13 +110,18 @@ public class MenuPanel extends JPanel {
             
             btnAdd.setEnabled(false); btnAdd.setText("Loading...");
             new Thread(() -> {
+                String imgPath = (selectedMenuIcon != null && selectedMenuIcon.getDescription() != null) ? selectedMenuIcon.getDescription() : "";
                 String msg = "ADD_MENU;" + n + ";" + d + ";" + p + ";" + c + ";" + s;
                 String resp = socketService.sendRequest(msg);
+
                 SwingUtilities.invokeLater(() -> {
                     if("SUCCESS".equalsIgnoreCase(resp)) {
-                        model.addRow(new Object[]{selectedMenuIcon!=null?StyleUtils.resizeImage(selectedMenuIcon,60,60):null, model.getRowCount()+1, n, d, p, c, s.startsWith("TRUE")});
-                        clearForm(); JOptionPane.showMessageDialog(this, "Berhasil!");
-                    } else { JOptionPane.showMessageDialog(this, "Gagal: " + resp); }
+                        JOptionPane.showMessageDialog(this, "Berhasil!");
+                        clearForm(); 
+                        loadData(); 
+                    } else { 
+                        JOptionPane.showMessageDialog(this, "Gagal: " + resp); 
+                    }
                     btnAdd.setEnabled(true); btnAdd.setText("Tambah");
                 });
             }).start();
@@ -121,15 +131,15 @@ public class MenuPanel extends JPanel {
         btnEdit.addActionListener(e -> {
             int r = table.getSelectedRow();
             if (r >= 0) {
-                model.setValueAt(txtNamaMenu.getText(), r, 2);
-                model.setValueAt(txtDeskripsiMenu.getText(), r, 3);
-                model.setValueAt(txtHargaMenu.getText(), r, 4);
-                model.setValueAt(cbKategoriMenu.getSelectedItem(), r, 5);
+                tableModel.setValueAt(txtNamaMenu.getText(), r, 2);
+                tableModel.setValueAt(txtDeskripsiMenu.getText(), r, 3);
+                tableModel.setValueAt(txtHargaMenu.getText(), r, 4);
+                tableModel.setValueAt(cbKategoriMenu.getSelectedItem(), r, 5);
                 String status = (String) cbStatusMenu.getSelectedItem();
-                model.setValueAt(status.startsWith("TRUE"), r, 6);
-                
+                tableModel.setValueAt(status.startsWith("TRUE"), r, 6);
+
                 if(selectedMenuIcon != null) {
-                    model.setValueAt(StyleUtils.resizeImage(selectedMenuIcon, 60, 60), r, 0);
+                    tableModel.setValueAt(StyleUtils.resizeImage(selectedMenuIcon, 60, 60), r, 0);
                 }
                 clearForm();
                 JOptionPane.showMessageDialog(this, "Data berhasil diubah (GUI Only)!");
@@ -138,27 +148,86 @@ public class MenuPanel extends JPanel {
             }
         });
 
-        btnDel.addActionListener(e -> { if(table.getSelectedRow()>=0) model.removeRow(table.getSelectedRow()); });
+        btnDel.addActionListener(e -> { if(table.getSelectedRow()>=0) 
+        tableModel.removeRow(table.getSelectedRow()); 
+    });
         btnReset.addActionListener(e -> clearForm());
         
         table.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
                 int r = table.getSelectedRow();
-                txtNamaMenu.setText(model.getValueAt(r, 2).toString());
-                txtDeskripsiMenu.setText(model.getValueAt(r, 3).toString());
-                txtHargaMenu.setText(model.getValueAt(r, 4).toString());
-                cbKategoriMenu.setSelectedItem(model.getValueAt(r, 5).toString());
-                boolean isAvail = (boolean) model.getValueAt(r, 6);
+                txtNamaMenu.setText(tableModel.getValueAt(r, 2).toString());
+                txtDeskripsiMenu.setText(tableModel.getValueAt(r, 3).toString());
+                txtHargaMenu.setText(tableModel.getValueAt(r, 4).toString());
+                cbKategoriMenu.setSelectedItem(tableModel.getValueAt(r, 5).toString());
+
+                boolean isAvail = (boolean) tableModel.getValueAt(r, 6);
                 cbStatusMenu.setSelectedIndex(isAvail ? 0 : 1);
-                ImageIcon thumb = (ImageIcon) model.getValueAt(r, 0);
-                if(thumb!=null) { selectedMenuIcon = StyleUtils.resizeImage(thumb, 120, 120); lblImagePreview.setIcon(selectedMenuIcon); lblImagePreview.setText(""); }
-                else { lblImagePreview.setIcon(null); lblImagePreview.setText("No Image"); }
+
+                ImageIcon thumb = (ImageIcon) tableModel.getValueAt(r, 0);
+                if(thumb!=null) { 
+                    selectedMenuIcon = StyleUtils.resizeImage(thumb, 120, 120); 
+                    lblImagePreview.setIcon(selectedMenuIcon); 
+                    lblImagePreview.setText(""); 
+                }
+                else { 
+                    lblImagePreview.setIcon(null); 
+                    lblImagePreview.setText("No Image"); 
+                }
             }
         });
 
         contentGrid.add(formCard, BorderLayout.NORTH);
         contentGrid.add(scrollPane, BorderLayout.CENTER);
         add(contentGrid, BorderLayout.CENTER);
+
+        loadData();
+    }
+
+    private void loadData() {
+        new Thread(() -> {
+            String response = socketService.sendRequest("GET_ALL_MENUS");
+            
+            // Format: LIST_MENUS#id;nama;desc;harga;kategori;avail;path#...
+            if (response != null && response.startsWith("LIST_MENUS#")) {
+                String rawData = response.substring("LIST_MENUS#".length());
+                
+                SwingUtilities.invokeLater(() -> {
+                    tableModel.setRowCount(0); // Kosongkan tabel
+                    
+                    if (rawData.equals("EMPTY") || rawData.isEmpty()) return;
+
+                    String[] rows = rawData.split("#");
+                    for (String row : rows) {
+                        String[] cols = row.split(";");
+                        if (cols.length >= 7) {
+                            // Load Gambar
+                            ImageIcon icon = null;
+                            String imgPath = cols[6];
+                            if (!imgPath.equals("null") && !imgPath.isEmpty()) {
+                                try {
+                                    icon = new ImageIcon(imgPath);
+                                    icon = StyleUtils.resizeImage(icon, 60, 60);
+                                } catch (Exception ex) {
+                                    System.out.println("Gagal load gambar: " + imgPath);
+                                }
+                            }
+
+                            // Masukkan ke tabel
+                            tableModel.addRow(new Object[]{
+                                icon,           // Foto (Kolom 0)
+                                cols[0],        // ID
+                                cols[1],        // Nama
+                                cols[2],        // Deskripsi
+                                cols[3],        // Harga
+                                cols[4],        // Kategori
+                                Boolean.parseBoolean(cols[5]) // Available (True/False)
+                            });
+                        }
+                    }
+                });
+            }
+        }).start();
     }
 
     private void addFormRow(JPanel panel, GridBagConstraints gbc, int row, String label, JComponent comp) {

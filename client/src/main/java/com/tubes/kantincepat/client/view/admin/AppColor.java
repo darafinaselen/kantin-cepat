@@ -1,5 +1,4 @@
-package app;
-
+package com.tubes.kantincepat.client.view.admin;
 import java.awt.Color;
 import java.awt.Font;
 

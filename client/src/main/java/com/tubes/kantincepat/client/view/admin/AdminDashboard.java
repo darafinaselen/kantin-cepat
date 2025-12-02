@@ -1,29 +1,28 @@
-package app;
+package com.tubes.kantincepat.client.view.admin;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.*;
+import com.tubes.kantincepat.client.net.ClientSocket; 
 
 public class AdminDashboard extends JFrame {
 
     private JPanel mainContentPanel;
     private CardLayout cardLayout;
-    private SocketService socketService;
+    private ClientSocket socketService;
 
     public AdminDashboard() {
-        setTitle("Admin Panel - Kantin Cepat");
+        setTitle("Admin Pane l - Kantin Cepat");
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        // 1. INIT SOCKET
-        socketService = new SocketService();
-        try {
-            socketService.connect();
-        } catch (Exception e) {
-            System.out.println("Info: Server belum nyala, berjalan dalam mode Offline GUI.");
-        }
+        // 1. INIT SOCKET (Panggil Singleton Instance)
+        socketService = ClientSocket.getInstance();
+        
+        // Cek koneksi sederhana (opsional, karena ClientSocket sudah init di constructornya)
+        // System.out.println("Admin connected to server.");
 
         // 2. HEADER
         JPanel headerPanel = new JPanel() {
@@ -49,8 +48,11 @@ public class AdminDashboard extends JFrame {
         btnLogout.setPreferredSize(new Dimension(100, 40));
         btnLogout.addActionListener(e -> {
             if(JOptionPane.showConfirmDialog(this, "Keluar?", "Logout", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION){
-                socketService.disconnect();
-                new LoginAdmin().setVisible(true); dispose();
+                // Tidak perlu socketService.disconnect() manual jika pakai Singleton
+                // Tapi kalau mau logout user secara logic, kirim request logout ke server di sini
+                
+                new LoginAdmin().setVisible(true); 
+                dispose();
             }
         });
 
@@ -75,9 +77,10 @@ public class AdminDashboard extends JFrame {
         mainContentPanel.setBackground(AppColor.BACKGROUND);
         mainContentPanel.setBorder(new EmptyBorder(20, 20, 20, 20)); 
         
+        // Pass socketService ke panel yang butuh akses server
         mainContentPanel.add(new MenuPanel(socketService), "MENU");
         mainContentPanel.add(new UserPanel(socketService), "USER");
-        mainContentPanel.add(new OrderPanel(), "ORDER");
+        mainContentPanel.add(new OrderPanel(socketService), "ORDER");
         mainContentPanel.add(new ChatPanel(), "CHAT"); 
 
         add(headerPanel, BorderLayout.NORTH);
@@ -102,9 +105,5 @@ public class AdminDashboard extends JFrame {
         });
         btn.addActionListener(e -> cardLayout.show(mainContentPanel, cardName));
         sidebar.add(btn); sidebar.add(Box.createRigidArea(new Dimension(0, 5)));
-    }
-
-    public static void main(String[] args) {
-         SwingUtilities.invokeLater(() -> new AdminDashboard().setVisible(true));
     }
 }

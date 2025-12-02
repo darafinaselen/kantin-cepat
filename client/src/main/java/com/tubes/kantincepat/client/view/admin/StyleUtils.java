@@ -1,4 +1,4 @@
-package app;
+package com.tubes.kantincepat.client.view.admin;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -12,7 +12,7 @@ public class StyleUtils {
 
     // Membuat Tombol Rounded
     public static JButton createRoundedButton(String text, Color bg, Color fg) {
-        JButton btn = new JButton(text) {
+        JButton btn =  new JButton(text) {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);

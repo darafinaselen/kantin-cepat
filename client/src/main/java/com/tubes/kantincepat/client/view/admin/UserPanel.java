@@ -1,17 +1,21 @@
-package app;
+package com.tubes.kantincepat.client.view.admin;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
+
+import com.tubes.kantincepat.client.net.ClientSocket;
+
 import java.awt.*;
 import java.awt.event.*;
 
 public class UserPanel extends JPanel {
     private JTextField txtUserApp, txtPassApp, txtEmailApp, txtFullNameApp, txtPhoneApp;
     private JComboBox<String> cbRoleApp;
-    private SocketService socketService;
+    private ClientSocket socketService;
+    private DefaultTableModel tableModel;
 
-    public UserPanel(SocketService socket) {
+    public UserPanel(ClientSocket socket) {
         this.socketService = socket;
         setLayout(new BorderLayout(20, 20));
         setOpaque(false);
@@ -53,18 +57,16 @@ public class UserPanel extends JPanel {
         JButton btnReset = StyleUtils.createRoundedButton("Reset", AppColor.BTN_MAROON, Color.WHITE);
         
         btnPanel.add(btnAdd); 
-        btnPanel.add(btnEdit); // <-- Dimasukkan ke Panel
+        btnPanel.add(btnEdit); 
         btnPanel.add(btnDel); 
         btnPanel.add(btnReset);
         
         gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 2; formCard.add(btnPanel, gbc);
 
         String[] cols = {"ID", "Username", "Email", "Nama Lengkap", "No HP", "Role"};
-        DefaultTableModel model = new DefaultTableModel(cols, 0);
-        model.addRow(new Object[]{1, "admin", "admin@kantin.com", "Admin Kantin", "081234567890", "ADMIN"});
-        model.addRow(new Object[]{2, "dapur", "dapur@kantin.com", "Staff Dapur", "081234567891", "KITCHEN"});
 
-        JTable table = new JTable(model);
+        tableModel = new DefaultTableModel(cols, 0);
+        JTable table = new JTable(tableModel);
         StyleUtils.styleTable(table, 35);
         JScrollPane scroll = new JScrollPane(table);
         scroll.setBorder(BorderFactory.createEmptyBorder());
@@ -73,12 +75,14 @@ public class UserPanel extends JPanel {
         table.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
                 int r = table.getSelectedRow();
-                txtUserApp.setText(model.getValueAt(r, 1).toString());
-                txtEmailApp.setText(model.getValueAt(r, 2).toString());
-                txtFullNameApp.setText(model.getValueAt(r, 3).toString());
-                txtPhoneApp.setText(model.getValueAt(r, 4).toString());
-                cbRoleApp.setSelectedItem(model.getValueAt(r, 5).toString());
-                txtPassApp.setText("");
+                if (r >= 0) {
+                    txtUserApp.setText(tableModel.getValueAt(r, 1).toString());
+                    txtEmailApp.setText(tableModel.getValueAt(r, 2).toString());
+                    txtFullNameApp.setText(tableModel.getValueAt(r, 3).toString());
+                    txtPhoneApp.setText(tableModel.getValueAt(r, 4).toString());
+                    cbRoleApp.setSelectedItem(tableModel.getValueAt(r, 5).toString());
+                    txtPassApp.setText(""); 
+                }
             }
         });
         
@@ -89,8 +93,9 @@ public class UserPanel extends JPanel {
                 String resp = socketService.sendRequest(msg);
                 SwingUtilities.invokeLater(() -> {
                     if("SUCCESS".equalsIgnoreCase(resp)){
-                        model.addRow(new Object[]{model.getRowCount()+1, txtUserApp.getText(), txtEmailApp.getText(), txtFullNameApp.getText(), txtPhoneApp.getText(), cbRoleApp.getSelectedItem()}); 
-                        clearForm(); JOptionPane.showMessageDialog(this, "Berhasil!");
+                        JOptionPane.showMessageDialog(this, "Berhasil Menambah User!");
+                        clearForm();
+                        loadData();
                     } else { JOptionPane.showMessageDialog(this, "Gagal: " + resp); }
                     btnAdd.setEnabled(true);
                 });
@@ -101,10 +106,10 @@ public class UserPanel extends JPanel {
         btnEdit.addActionListener(e -> {
             int r = table.getSelectedRow();
             if(r >= 0) {
-                model.setValueAt(txtEmailApp.getText(), r, 2);
-                model.setValueAt(txtFullNameApp.getText(), r, 3);
-                model.setValueAt(txtPhoneApp.getText(), r, 4);
-                model.setValueAt(cbRoleApp.getSelectedItem(), r, 5);
+                tableModel.setValueAt(txtEmailApp.getText(), r, 2);
+                tableModel.setValueAt(txtFullNameApp.getText(), r, 3);
+                tableModel.setValueAt(txtPhoneApp.getText(), r, 4);
+                tableModel.setValueAt(cbRoleApp.getSelectedItem(), r, 5);
                 clearForm();
                 JOptionPane.showMessageDialog(this, "Data User Diubah!");
             } else {
@@ -112,12 +117,54 @@ public class UserPanel extends JPanel {
             }
         });
 
-        btnDel.addActionListener(e -> { if(table.getSelectedRow()>=0) model.removeRow(table.getSelectedRow()); });
+        btnDel.addActionListener(e -> { 
+            if(table.getSelectedRow() >= 0) {
+                tableModel.removeRow(table.getSelectedRow()); 
+            } else {
+                JOptionPane.showMessageDialog(this, "Pilih user yang mau dihapus!");
+            }
+        });
+
         btnReset.addActionListener(e -> clearForm());
 
         contentGrid.add(formCard, BorderLayout.NORTH);
         contentGrid.add(scroll, BorderLayout.CENTER);
         add(contentGrid, BorderLayout.CENTER);
+
+        loadData();
+    }
+
+    private void loadData() {
+        new Thread(() -> {
+            // Request ke server
+            String response = socketService.sendRequest("GET_USERS");
+            
+            // Format: LIST_USERS#1;admin;...#2;dapur;...
+            if (response != null && response.startsWith("LIST_USERS#")) {
+                String rawData = response.substring("LIST_USERS#".length());
+                
+                SwingUtilities.invokeLater(() -> {
+                    tableModel.setRowCount(0); // Kosongkan tabel lama
+                    
+                    if (rawData.equals("EMPTY") || rawData.isEmpty()) return;
+
+                    String[] rows = rawData.split("#"); // Pisah antar user
+                    for (String row : rows) {
+                        String[] cols = row.split(";"); // Pisah antar kolom
+                        if (cols.length >= 6) {
+                            tableModel.addRow(new Object[]{
+                                cols[0], // ID
+                                cols[1], // Username
+                                cols[2], // Email
+                                cols[3], // Fullname
+                                cols[4], // Phone
+                                cols[5]  // Role
+                            });
+                        }
+                    }
+                });
+            }
+        }).start();
     }
 
     private void addFormRow(JPanel panel, GridBagConstraints gbc, int row, String label, JComponent comp) {
