@@ -173,7 +173,7 @@ public class ClientApp extends JFrame {
         // Sekarang pakai Popup dulu biar ga error.
         JOptionPane.showMessageDialog(this, 
             "INVOICE #" + order.orderId + "\n" +
-            "Tanggal: " + order.date + "\n" +khl
+            "Tanggal: " + order.date + "\n" +
             "Total: Rp " + order.totalPrice + "\n\n" +
             "Items:\n" + order.itemsSummary,
             "Invoice Digital",
@@ -182,7 +182,7 @@ public class ClientApp extends JFrame {
 
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
+         SwingUtilities.invokeLater(() -> {
             new ClientApp().setVisible(true);
         });
     }

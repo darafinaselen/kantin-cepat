@@ -67,9 +67,17 @@ public class ClientHandler implements Runnable{
             stmt.setString(3, password);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                String role = rs.getString("role"); 
+                int id = rs.getInt("user_id");
+                String role = rs.getString("role");
                 String fullname = rs.getString("full_name");
-                out.println("LOGIN_SUCCESS:" + role + ":" + fullname);
+                String username = rs.getString("username");
+                String email = rs.getString("email");
+                String phone = rs.getString("phone_number");
+
+                if (phone == null) phone = "-";
+
+                out.println("LOGIN_SUCCESS:" + role + ":" + fullname + ":" + id + ":" + username + ":" + email + ":" + phone);
+                System.out.println("✅ User Logged In: " + username);
             } else {
                 out.println("LOGIN_FAILED:Wrong credentials");
             }

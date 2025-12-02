@@ -26,7 +26,7 @@ import java.util.Locale;
 
 public class Menu_Utama extends JPanel {
 
-    private ClientApp clientApp; // Referensi ke ClientApp agar bisa akses konstanta warna
+    private ClientApp clientApp; 
 
     private List<MenuItem> allMenuItems = new ArrayList<>();
     private JPanel menuGridPanel; 
